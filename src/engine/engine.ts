@@ -371,7 +371,7 @@ export class InterviewEngine {
     this.speaking = null;
     // Keep an answer the user already gave: close it and its Gate as skipped.
     if (this.phase === 'listening' && this.q?.tracker?.answerStarted) {
-      const end = this.q.tracker.end(this.nowMs, 'manual');
+      const end = this.q.tracker.end(this.nowMs, 'endSession');
       this.enterGate(end.tMs, end.reason);
     }
     if (this.phase === 'gate' && this.q && !this.q.gateResult) {
@@ -396,6 +396,7 @@ export class InterviewEngine {
       id: meta.id,
       createdAt: meta.createdAt,
       mode: this.mode,
+      ...(meta.replayOf ? { replayOf: meta.replayOf } : {}),
       appVersion: meta.appVersion,
       config: this.config,
       signalCheck: this.signalCheckResult,
@@ -734,7 +735,12 @@ export class InterviewEngine {
   private enterDebrief(t: number): void {
     this.setPhase('debrief', t, this.questions.length - 1);
     this.q = null;
-    this.speak("That's the last question. Here is your debrief.", 'outro', t);
+    const complete = this.results.length >= this.questions.length;
+    this.speak(
+      complete ? "That's the last question. Here is your debrief." : "Let's stop here. Here is your debrief.",
+      'outro',
+      t,
+    );
     this.emit({ type: 'debriefReady', tMs: t });
     this.notify(true);
   }

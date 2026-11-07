@@ -56,7 +56,13 @@ export function GateScreen({ engine, snap }: { engine: InterviewEngine; snap: En
   const bandOverlay = useCallback((): BandOverlay | null => {
     const g = engine.getSnapshot().gate;
     if (!g?.band || !g.status) return null;
-    return { center: g.status.center, ampLo: g.band.ampLo, ampHi: g.band.ampHi, inBand: g.status.inBand };
+    return {
+      center: g.status.center,
+      ampLo: g.band.ampLo,
+      ampHi: g.band.ampHi,
+      inBand: g.status.inBand,
+      personal: g.band.personal,
+    };
   }, [engine]);
 
   const waterState = useCallback((): WaterState => {
@@ -104,7 +110,10 @@ export function GateScreen({ engine, snap }: { engine: InterviewEngine; snap: En
       month: 'short',
       day: 'numeric',
     });
-    const png = renderRecoveredCard(qResult, snap.questionCount, date, engine.config.gate);
+    const png = renderRecoveredCard(qResult, snap.questionCount, date, engine.config.gate, {
+      mode: snap.mode,
+      replayOf: controller.replayOf ?? undefined,
+    });
     const res = await controller.savePng(png, `composure-q${qResult.index + 1}-recovery.png`);
     setSaved(res?.ok ? `Saved to ${res.path}` : res?.cancelled ? null : 'Could not save the card');
   };
@@ -149,7 +158,7 @@ export function GateScreen({ engine, snap }: { engine: InterviewEngine; snap: En
               </div>
               <p className="muted" style={{ margin: '0 0 22px' }}>
                 {result.outcome === 'settled'
-                  ? `Back inside your seated band, then held for ${(hold / 1000).toFixed(0)} s.`
+                  ? `Back inside ${result.personalBand === false ? 'the wide default band' : 'your seated band'}, then held for ${(hold / 1000).toFixed(0)} s.`
                   : result.outcome === 'timed out'
                     ? `The Gate opened at its ${(timeout / 1000).toFixed(0)} s limit.`
                     : 'No measurement for this pause.'}
@@ -208,8 +217,11 @@ export function GateScreen({ engine, snap }: { engine: InterviewEngine; snap: En
           )}
           <div className="row" style={{ marginTop: 22 }}>
             <span className="muted small">
-              The band is your own seated breathing: period and depth within{' '}
-              {engine.config.gate.bandSdMultiplier} SD of your baseline.
+              {paced
+                ? 'A fixed pause: nothing is measured with the camera off.'
+                : gate?.band && !gate.band.personal
+                  ? 'This Gate uses a wide default band, not your own baseline.'
+                  : `The band is your own seated breathing: period and depth within ${engine.config.gate.bandSdMultiplier} SD of your baseline.`}
             </span>
             <span className="spacer" />
             <button type="button" className="btn ghost" onClick={() => controller.skipGate()}>

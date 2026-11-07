@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import type { QuestionResult, SessionRecord } from '../../engine/session';
+import { median } from '../../engine/stats';
 import { renderRecoveredCard } from '../components/cardPng';
+import { provenanceLabel } from '../components/provenance';
 import { Sparkline } from '../components/Sparkline';
 import { fmtSeconds, fmtSigned, useController, useStore } from '../runtime/hooks';
 
@@ -19,6 +21,7 @@ const END_REASON: Record<string, string> = {
   manual: 'ended with Done',
   maxLength: 'stopped at the 4 min cap',
   noAnswer: 'no answer detected',
+  endSession: 'ended with End session',
 };
 
 function QuestionCard({ q, total, record }: { q: QuestionResult; total: number; record: SessionRecord }) {
@@ -40,7 +43,10 @@ function QuestionCard({ q, total, record }: { q: QuestionResult; total: number; 
       day: 'numeric',
     });
     const res = await controller.savePng(
-      renderRecoveredCard(q, total, date, record.config.gate),
+      renderRecoveredCard(q, total, date, record.config.gate, {
+        mode: record.mode,
+        replayOf: record.replayOf,
+      }),
       `composure-q${q.index + 1}-recovery.png`,
     );
     setSaved(res?.ok ? `Saved to ${res.path}` : res?.cancelled ? null : 'Could not save the card');
@@ -75,7 +81,13 @@ function QuestionCard({ q, total, record }: { q: QuestionResult; total: number; 
           k="Recovery"
           v={q.recovery === 'settled' ? fmtSeconds(q.recoveryTimeMs) : q.recovery}
           na={q.recovery !== 'settled'}
-          sub={q.recovery === 'settled' ? 'back in seated band' : undefined}
+          sub={
+            q.recovery === 'settled'
+              ? q.gate.personalBand === false
+                ? 'back in wide default band'
+                : 'back in seated band'
+              : undefined
+          }
         />
         <Metric
           k="Pulse vs talking baseline"
@@ -152,6 +164,10 @@ export function DebriefView({ record, live }: { record: SessionRecord; live: boo
     ? app.insights
     : { status: record.insights.length ? 'done' : 'off', records: record.insights, message: null };
   const settled = record.questions.filter((q) => q.recovery === 'settled');
+  const provenance = provenanceLabel(record.mode, record.replayOf);
+  const cameraFree = record.mode === 'camera-free';
+  const medianRecovery = median(settled.map((q) => q.recoveryTimeMs ?? 0));
+  const waitingForInsight = live && (insights.status === 'requesting' || insights.status === 'pending');
 
   return (
     <main className="screen" data-screen="debrief">
@@ -159,13 +175,17 @@ export function DebriefView({ record, live }: { record: SessionRecord; live: boo
         Debrief · {new Date(record.createdAt).toLocaleString()} ·{' '}
         {record.mode === 'real' ? 'SmartSpectra SDK' : record.mode}
       </p>
+      {provenance && (
+        <div className="banner warn" data-testid="provenance">
+          {provenance}
+        </div>
+      )}
       <h1 className="headline">
-        {settled.length} of {total} Gates settled
-        {settled.length > 0
-          ? ` · median recovery ${fmtSeconds(
-              settled.map((q) => q.recoveryTimeMs ?? 0).sort((a, b) => a - b)[Math.floor(settled.length / 2)],
-            )}`
-          : ''}
+        {cameraFree
+          ? `${total} question${total === 1 ? '' : 's'} · paced pauses, timing only`
+          : `${settled.length} of ${total} Gates settled${
+              medianRecovery !== null ? ` · median recovery ${fmtSeconds(medianRecovery)}` : ''
+            }`}
       </h1>
       <p className="lede" style={{ fontSize: 18 }}>
         Each change below is shown next to the baseline from this session that it is measured against; session
@@ -224,7 +244,11 @@ export function DebriefView({ record, live }: { record: SessionRecord; live: boo
               <span className="muted small">confidence {hrv.confidence.toFixed(0)}</span>
             </p>
           ) : (
-            <p className="muted">not enough clean signal (needs about a minute of stillness)</p>
+            <p className="muted">
+              {cameraFree
+                ? 'camera off: not measured'
+                : 'not enough clean signal (needs about a minute of stillness)'}
+            </p>
           )}
         </div>
       </div>
@@ -278,10 +302,14 @@ export function DebriefView({ record, live }: { record: SessionRecord; live: boo
               type="button"
               className="btn primary big"
               onClick={() => void controller.saveSession()}
-              disabled={app.sessionSaved?.ok === true}
+              disabled={app.sessionSaved?.ok === true || waitingForInsight}
               data-testid="save-session"
             >
-              {app.sessionSaved?.ok ? 'Session saved' : 'Save session'}
+              {app.sessionSaved?.ok
+                ? 'Session saved'
+                : waitingForInsight
+                  ? 'Waiting for the summary…'
+                  : 'Save session'}
             </button>
             {app.canRecord && (
               <button type="button" className="btn big" onClick={() => void controller.saveRecording()}>
@@ -325,8 +353,12 @@ export function DebriefView({ record, live }: { record: SessionRecord; live: boo
 
       <p className="disclaimer">
         Composure is a rehearsal tool, not a medical device. It does not diagnose, treat, or monitor any
-        condition, and its numbers are not for medical decisions. Signals come from the SmartSpectra SDK and
-        are estimates relative to your own baseline from this session.
+        condition, and its numbers are not for medical decisions.{' '}
+        {record.mode === 'real'
+          ? 'Signals come from the SmartSpectra SDK and are estimates relative to your own baseline from this session.'
+          : record.mode === 'camera-free'
+            ? 'The camera was off: only answer timing was recorded.'
+            : (provenance ?? 'These numbers did not come from a live measurement.')}
       </p>
     </main>
   );

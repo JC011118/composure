@@ -75,7 +75,7 @@ export type Phase =
 
 export type SpeechKind = 'intro' | 'question' | 'cueA' | 'cueB' | 'outro';
 
-export type AnswerEndReason = 'silence' | 'manual' | 'maxLength' | 'noAnswer';
+export type AnswerEndReason = 'silence' | 'manual' | 'maxLength' | 'noAnswer' | 'endSession';
 
 export type CueKind = 'A' | 'B';
 

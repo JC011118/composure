@@ -220,7 +220,7 @@ still holds to within a frame. Set both to 0 to get the literal behavior.
 ## D-019 Camera-free mode
 
 Camera-free mode starts no camera and no SDK. Talking comes from the keyboard
-(hold or toggle Space) via `ManualSignalSource`; samples carry
+(hold Space while speaking) via `ManualSignalSource`; samples carry
 `sdkConfidenceOk=false`, so no physiological number can appear. The signal
 check and baselines are skipped and the Gate becomes a fixed 15 s paced pause
 (`cameraFree.pauseMs`). Timing metrics (time to first word, talk time,
@@ -448,3 +448,28 @@ long answer gets the 2:30 cut-in.
   contains, which requested metrics are unused (`lowerTrace`, `blinking`),
   and that the HUD shows raw SDK readings while debrief numbers are
   baseline-relative deltas.
+
+## D-038 Fixes from review round 2 (product flow + contest rules)
+
+- Provenance travels with the numbers, not just the HUD: the debrief shows a
+  banner and a mode-specific disclaimer, and the saved "Recovered" PNG card is
+  stamped (e.g. "SIMULATED · synthetic signals, not a measurement") and omits
+  the pulse delta when not from a live measurement. Replays carry the original
+  recording's source (`replayOf`), so a replayed simulator session is labelled
+  as simulated in the HUD, the debrief, the saved JSON, and the card.
+- When the Gate falls back to the wide default band, every surface says so
+  (Gate card, PNG, debrief tile, trace label, LLM prompt) instead of "your
+  seated band".
+- Camera-free debrief: "N questions · paced pauses, timing only" instead of a
+  settled count; HRV says "camera off: not measured"; the Gate shows "a fixed
+  pause: nothing is measured".
+- The consent screen's main list now states that the SDK sends periodic
+  automatic summaries of measured values to Presage during any camera session
+  (and points to camera-free mode), and the Insights option says the camera
+  stays on up to 25 s for the reply.
+- Ending early: the interviewer says "Let's stop here", and an answer closed
+  by End session is labelled "ended with End session".
+- Smaller: the debrief median averages the two middle values; the hold-to-speak
+  button no longer steals Enter's focus; "Save signal recording" is hidden in
+  camera-free mode (nothing is recorded); "Save session" waits for a pending
+  Insights reply.

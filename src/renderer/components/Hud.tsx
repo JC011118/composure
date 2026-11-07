@@ -23,7 +23,13 @@ export function Hud() {
   const controller = useController();
   const hud = useStore(controller.hud);
   const app = useStore(controller.app);
-  const badge = MODE_BADGE[hud.mode] ?? MODE_BADGE.idle;
+  const base = MODE_BADGE[hud.mode] ?? MODE_BADGE.idle;
+  const badge =
+    hud.mode === 'replay' && hud.replayOf === 'simulated'
+      ? { ...base, note: 'simulated recording, not a measurement' }
+      : hud.mode === 'replay' && hud.replayOf === 'real'
+        ? { ...base, note: 'recorded SmartSpectra signals' }
+        : base;
   const status = hud.status;
   const ok = status ? status.code === 0 : hud.sdkConfidenceOk;
   const label = status ? validationLabel(status.code) : null;

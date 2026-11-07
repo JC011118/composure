@@ -80,6 +80,8 @@ export interface GateResult {
   inBandFraction: number;
   /** Milliseconds the Gate was held closed by each criterion (diagnostic, for tuning). */
   outReasonMs?: Partial<Record<OutReason, number>>;
+  /** False when the Gate used the wide default band (too few seated breaths), not the user's own. */
+  personalBand?: boolean;
 }
 
 export function computeBand(breath: BreathStats | null, gate: GateConfig, baseline: BaselineConfig): Band {
@@ -226,6 +228,7 @@ export class GateDetector {
       outcome,
       timedOut: outcome === 'timed out',
       recoveryTimeMs,
+      personalBand: this.band.personal,
       inBandFraction: Math.min(1, this.inBandMs / dur),
       outReasonMs: Object.fromEntries(
         Object.entries(this.outMs).map(([k, v]) => [k, Math.round(v as number)]),

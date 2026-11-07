@@ -30,7 +30,7 @@ export function buildInsightPrompt(rec: SessionRecord): string {
       `talk time ${fmtS(q.talkTimeMs)}`,
       `pauses ${q.pauseCount}`,
       q.recovery === 'settled'
-        ? `breathing back in seated band after ${fmtS(q.recoveryTimeMs)}`
+        ? `breathing back in ${q.gate.personalBand === false ? 'a wide default band (not a personal baseline)' : 'seated band'} after ${fmtS(q.recoveryTimeMs)}`
         : `recovery: ${q.recovery}`,
     ];
     if (q.pulse.shown && q.pulse.deltaBpm !== null)

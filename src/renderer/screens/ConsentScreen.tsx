@@ -83,6 +83,12 @@ export function ConsentScreen() {
               <ExternalLink href={TELEMETRY_URL}>What SDK telemetry includes</ExternalLink>
             </li>
             <li>
+              Per Presage's documentation, during any camera session the SDK also sends periodic summaries of
+              measured pulse, HRV, and breathing-rate values (numbers, never video) to Presage for its
+              automatic insights. Composure never shows them. Use camera-free mode if no values should leave
+              this Mac.
+            </li>
+            <li>
               Composure is a rehearsal tool, not a medical device. It does not diagnose, treat, or interpret
               anything; it only compares numbers with your own baseline.
             </li>
@@ -119,8 +125,8 @@ export function ConsentScreen() {
             <div>
               <div className="label">Camera-free mode</div>
               <div className="desc">
-                No camera and no SDK. Hold or tap Space while you speak; the Gate becomes a 15 s paced pause
-                and the debrief shows timing only.
+                No camera and no SDK, so nothing is measured or sent. Hold Space while you speak; the Gate
+                becomes a 15 s paced pause and the debrief shows timing only.
               </div>
             </div>
           </label>
@@ -138,8 +144,9 @@ export function ConsentScreen() {
                 At the end, ask Presage's LLM Insights service for a short written summary. This sends your
                 per-question numbers and the SDK's buffered pulse, HRV, and breathing-rate values (never
                 video) to Presage, which forwards them to a language model. Replies can be wrong and are not
-                advice. Per the SDK documentation, the SDK may also send periodic automatic vitals summaries
-                during any measurement; Composure never displays those.{' '}
+                advice. The camera stays on for up to 25 s after the last question while the reply arrives.
+                Per the SDK documentation, the SDK may also send periodic automatic vitals summaries during
+                any measurement; Composure never displays those.{' '}
                 <ExternalLink href={INSIGHTS_URL}>About LLM Insights</ExternalLink>
               </div>
             </div>

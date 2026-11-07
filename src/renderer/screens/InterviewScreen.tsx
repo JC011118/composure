@@ -94,6 +94,7 @@ export function InterviewScreen({ engine, snap }: { engine: InterviewEngine; sna
           <button
             type="button"
             className={`btn big ${app.manualTalking ? 'primary' : ''}`}
+            onMouseDown={(e) => e.preventDefault() /* keep focus off, so Enter still means Done */}
             onPointerDown={() => controller.setManualTalking(true)}
             onPointerUp={() => controller.setManualTalking(false)}
             onPointerLeave={() => app.manualTalking && controller.setManualTalking(false)}

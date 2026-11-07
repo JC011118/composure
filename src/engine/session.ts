@@ -101,6 +101,8 @@ export interface SessionRecord {
   id: string;
   createdAt: string;
   mode: SignalMode;
+  /** For replays: the kind of source the recording came from. */
+  replayOf?: SignalMode;
   appVersion: string;
   config: EngineConfig;
   signalCheck: { durationMs: number; timedOut: boolean } | null;
@@ -115,6 +117,8 @@ export interface SessionMeta {
   id: string;
   createdAt: string;
   appVersion: string;
+  /** For replays: the kind of source the recording came from (e.g. 'simulated'). */
+  replayOf?: SignalMode;
 }
 
 export function serializeSession(record: SessionRecord): string {

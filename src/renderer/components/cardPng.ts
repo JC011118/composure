@@ -4,7 +4,9 @@
  */
 
 import type { QuestionResult } from '../../engine/session';
+import type { SignalMode } from '../../engine/types';
 import { drawSeries } from './Sparkline';
+import { provenanceLabel } from './provenance';
 
 const W = 1200;
 const H = 630;
@@ -34,7 +36,7 @@ export function cardHeadline(q: QuestionResult): string {
   switch (q.recovery) {
     case 'settled':
       return q.recoveryTimeMs !== null && q.recoveryTimeMs < 500
-        ? 'Already in your band'
+        ? 'Already in the band'
         : `Recovered in ${((q.recoveryTimeMs ?? 0) / 1000).toFixed(1)} s`;
     case 'timed out':
       return 'Recovery: timed out';
@@ -50,7 +52,10 @@ export function renderRecoveredCard(
   total: number,
   dateLabel: string,
   gate: { holdMs: number; timeoutMs: number },
+  source: { mode: SignalMode; replayOf?: SignalMode },
 ): string {
+  const provenance = provenanceLabel(source.mode, source.replayOf);
+  const personal = q.gate.personalBand !== false;
   const canvas = document.createElement('canvas');
   canvas.width = W;
   canvas.height = H;
@@ -71,6 +76,17 @@ export function renderRecoveredCard(
   ctx.fillStyle = '#7d8b9a';
   ctx.font = '600 22px -apple-system, "Segoe UI", Inter, sans-serif';
   ctx.fillText(`COMPOSURE · QUESTION ${q.index + 1} OF ${total}`, 64, 82);
+  if (provenance) {
+    // Never let a simulated or replayed card pass as a live measurement.
+    ctx.font = '700 22px ui-monospace, Menlo, monospace';
+    const tw = ctx.measureText(provenance).width;
+    ctx.fillStyle = 'rgba(251,191,119,0.16)';
+    ctx.fillRect(W - 64 - tw - 24, 52, tw + 24, 42);
+    ctx.fillStyle = '#fbbf77';
+    ctx.textAlign = 'right';
+    ctx.fillText(provenance, W - 64 - 12, 81);
+    ctx.textAlign = 'left';
+  }
 
   ctx.fillStyle = q.recovery === 'settled' ? '#5eead4' : '#fbbf77';
   ctx.font = '700 92px -apple-system, "Segoe UI", Inter, sans-serif';
@@ -80,7 +96,7 @@ export function renderRecoveredCard(
   ctx.font = '26px -apple-system, "Segoe UI", Inter, sans-serif';
   const sub =
     q.recovery === 'settled'
-      ? `Breathing back inside my own seated band, then held there for ${(gate.holdMs / 1000).toFixed(0)} s.`
+      ? `Breathing back inside ${personal ? 'my own seated band' : 'a wide default band (not a personal baseline)'}, then held there for ${(gate.holdMs / 1000).toFixed(0)} s.`
       : q.recovery === 'timed out'
         ? `The Gate opened at its ${(gate.timeoutMs / 1000).toFixed(0)} s limit.`
         : 'No measurement for this pause.';
@@ -105,7 +121,7 @@ export function renderRecoveredCard(
   ctx.fillStyle = '#7d8b9a';
   ctx.font = '20px ui-monospace, Menlo, monospace';
   const extras: string[] = [];
-  if (q.pulse.shown && q.pulse.deltaBpm !== null) {
+  if (!provenance && q.pulse.shown && q.pulse.deltaBpm !== null) {
     extras.push(
       `pulse ${q.pulse.deltaBpm >= 0 ? '+' : '−'}${Math.abs(q.pulse.deltaBpm).toFixed(0)} bpm vs talking baseline`,
     );

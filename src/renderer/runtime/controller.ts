@@ -13,7 +13,7 @@ import { buildInsightPrompt } from '../../engine/insightPrompt';
 import { redactBannedTerms } from '../../engine/lexicon';
 import { selectQuestions } from '../../engine/questions';
 import { parseSession, serializeSession, type InsightRecord, type SessionRecord } from '../../engine/session';
-import type { EngineEvent, SignalSample, SignalStatus } from '../../engine/types';
+import type { EngineEvent, SignalMode, SignalSample, SignalStatus } from '../../engine/types';
 import { QUESTION_BANK } from '../../content';
 import type { BootInfo, SaveResult, SavedSessionSummary } from '../../shared/ipc';
 import { ManualSignalSource } from '../../signals/ManualSignalSource';
@@ -55,6 +55,8 @@ export interface AppState {
 
 export interface HudState {
   mode: 'real' | 'simulated' | 'replay' | 'camera-free' | 'idle';
+  /** In replay mode, what produced the recording. */
+  replayOf?: SignalMode | null;
   talking: boolean | null;
   breathingRate: number | null;
   breathingRateConfidence: number | null;
@@ -128,6 +130,8 @@ export class SessionController {
   private generation = 0;
   /** Teardown of the previous source; a new session waits for it (the SDK is process-global). */
   private pendingStop: Promise<void> | null = null;
+  /** In replay mode, the kind of source the recording came from. */
+  replayOf: SignalMode | null = null;
 
   async init(): Promise<void> {
     const bridge = window.composure;
@@ -219,7 +223,11 @@ export class SessionController {
       return;
     }
 
-    this.hud.set({ ...IDLE_HUD, mode: opts.cameraFree ? 'camera-free' : source.kind });
+    this.hud.set({
+      ...IDLE_HUD,
+      mode: opts.cameraFree ? 'camera-free' : source.kind,
+      replayOf: source.kind === 'replay' ? this.replayOf : null,
+    });
     this.engineStore.set(engine);
     this.tap?.setSession(
       questions.map((q) => q.id),
@@ -237,6 +245,7 @@ export class SessionController {
     this.patch({
       starting: false,
       screen: 'session',
+      canRecord: boot.recordSignals && !opts.cameraFree,
       cameraActive: source.kind === 'real',
       insights: {
         status: opts.insightsOptIn ? (source.insights ? 'pending' : 'unavailable') : 'off',
@@ -258,7 +267,9 @@ export class SessionController {
     if (boot.mode === 'replay') {
       const json = await window.composure?.readReplay();
       if (!json) throw new Error(`Could not read the replay file ${boot.replayFile ?? ''}`);
-      return new ReplaySignalSource(parseRecording(json));
+      const recording = parseRecording(json);
+      this.replayOf = recording.source;
+      return new ReplaySignalSource(recording);
     }
     const apiKey = await window.composure?.getApiKey();
     if (!apiKey) throw new Error('Real mode needs PRESAGE_API_KEY in the environment.');
@@ -489,6 +500,7 @@ export class SessionController {
           id: newSessionId(now),
           createdAt: now.toISOString(),
           appVersion: this.app.get().boot?.appVersion ?? '',
+          ...(engine.mode === 'replay' && this.replayOf ? { replayOf: this.replayOf } : {}),
         },
         this.app.get().insights.records,
       );

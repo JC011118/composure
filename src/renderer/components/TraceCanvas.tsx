@@ -17,6 +17,8 @@ export interface BandOverlay {
   ampLo: number;
   ampHi: number;
   inBand: boolean;
+  /** False when the Gate uses the wide default band. */
+  personal: boolean;
 }
 
 export interface TraceCanvasProps {
@@ -168,7 +170,7 @@ export function TraceCanvas({
         ctx.font = '12px ui-monospace, Menlo, monospace';
         ctx.textAlign = 'right';
         ctx.fillStyle = accent ? 'rgba(127,240,221,0.9)' : 'rgba(184,196,208,0.75)';
-        ctx.fillText('your seated band', w - 12, y(c + ov.ampHi / 2) - 6);
+        ctx.fillText(ov.personal ? 'your seated band' : 'wide default band', w - 12, y(c + ov.ampHi / 2) - 6);
         ctx.textAlign = 'left';
       }
 

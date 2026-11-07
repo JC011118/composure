@@ -106,7 +106,8 @@ const settled = measured.filter((q) => q.recovery === 'settled');
 const med = (xs) => {
   if (!xs.length) return null;
   const s = [...xs].sort((a, b) => a - b);
-  return s[Math.floor(s.length / 2)];
+  const mid = Math.floor(s.length / 2);
+  return s.length % 2 === 0 ? (s[mid - 1] + s[mid]) / 2 : s[mid];
 };
 console.log('\nSummary');
 console.log(

@@ -385,6 +385,38 @@ describe('InterviewEngine state machine', () => {
     }
   });
 
+  it('ending early mid-answer is labelled as such and announced differently', () => {
+    const run = new ScriptedRun({ talking: normalTalk }, { questions: 3 });
+    run.engine.begin(0);
+    run.runUntil(() => run.phase === 'listening', 300_000);
+    run.runTo(run.t + 6_000);
+    run.engine.endSession(run.t);
+    const [r] = run.engine.snapshotNow().results;
+    expect(r.endReason).toBe('endSession');
+    expect(r.recovery).toBe('skipped');
+    const outro = run.events.filter((e) => e.type === 'speak' && e.kind === 'outro') as { text: string }[];
+    expect(outro.map((o) => o.text)).toEqual(["Let's stop here. Here is your debrief."]);
+  });
+
+  it('records whether the Gate used the personal band', () => {
+    const run = new ScriptedRun({ talking: normalTalk }, { questions: 1 });
+    run.engine.begin(0);
+    run.runTo(200_000);
+    expect(run.engine.snapshotNow().results[0].gate.personalBand).toBe(true);
+    // A seated baseline with no usable breaths falls back to the wide default band.
+    const flat = new ScriptedRun(
+      {
+        talking: normalTalk,
+        trace: (_t, c) => (c.phase === 'baselineSeated' ? 0 : Math.sin((2 * Math.PI * _t) / 4_000)),
+      },
+      { questions: 1 },
+    );
+    flat.engine.begin(0);
+    flat.runTo(250_000);
+    expect(flat.engine.snapshotNow().band?.personal).toBe(false);
+    expect(flat.engine.snapshotNow().results[0].gate.personalBand).toBe(false);
+  });
+
   it('ending the session during a Gate keeps the answer just given', () => {
     const run = new ScriptedRun({ talking: normalTalk }, { questions: 2 });
     run.engine.begin(0);
