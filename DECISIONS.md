@@ -406,3 +406,15 @@ with regression tests where testable:
   through the end of an answer cannot leak into the next question.
 - A fatal SDK error after the debrief exists no longer discards it; the
   source is stopped and the error is shown as a banner.
+
+## D-036 Simulator realism additions
+
+Beyond the brief's ranges (breath period 3-6 s, pulse 55-100 bpm with
+confidence dips while talking), the simulator now includes occasional sighs
+(about 1 in 25 resting breaths is 1.8× deeper and 1.3× slower, as in real
+seated breathing; they exercise the Gate's deep-breath check) and respiratory
+sinus arrhythmia (pulse ±2 bpm with the breath cycle). Across seeds 1-6 the
+demo scenario produces: Gate 1 settles in 11-22 s, the hard question gets
+"Take your time." and settles in 8-18 s, the low-signal answer shows "not
+enough clean signal" for pulse, the slow settle times out at 45 s, and the
+long answer gets the 2:30 cut-in.
