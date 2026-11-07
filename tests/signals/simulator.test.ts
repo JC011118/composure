@@ -11,11 +11,7 @@ function collect(src: SimulatedSignalSource) {
   return { samples, statuses };
 }
 
-const phase = (
-  p: Phase,
-  tMs: number,
-  questionIndex = -1,
-): EngineEvent => ({
+const phase = (p: Phase, tMs: number, questionIndex = -1): EngineEvent => ({
   type: 'phase',
   phase: p,
   questionIndex,

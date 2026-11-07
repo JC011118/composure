@@ -1,0 +1,74 @@
+[
+  {
+    "id": "b-intro",
+    "tag": "behavioral",
+    "difficulty": 1,
+    "text": "Walk me through your background and what brought you to apply for this role."
+  },
+  {
+    "id": "b-proud",
+    "tag": "behavioral",
+    "difficulty": 1,
+    "text": "Tell me about a project you're proud of and the part you personally played in it."
+  },
+  {
+    "id": "b-conflict",
+    "tag": "behavioral",
+    "difficulty": 2,
+    "text": "Describe a time you disagreed with a teammate about a technical decision. How did you resolve it?"
+  },
+  {
+    "id": "b-failure",
+    "tag": "behavioral",
+    "difficulty": 3,
+    "text": "Tell me about a time you failed to deliver something you committed to. What happened, and what did you change afterward?"
+  },
+  {
+    "id": "b-feedback",
+    "tag": "behavioral",
+    "difficulty": 2,
+    "text": "Describe the hardest piece of feedback you've received and what you did with it."
+  },
+  {
+    "id": "b-ambiguity",
+    "tag": "behavioral",
+    "difficulty": 3,
+    "text": "Tell me about a time you had to make an important decision with incomplete information and no one to ask."
+  },
+  {
+    "id": "t-design-ratelimit",
+    "tag": "technical",
+    "difficulty": 2,
+    "text": "How would you design a rate limiter for a public API that runs across several servers?"
+  },
+  {
+    "id": "t-debug-prod",
+    "tag": "technical",
+    "difficulty": 2,
+    "text": "A service's latency doubled overnight with no deploys. Walk me through how you would investigate."
+  },
+  {
+    "id": "t-tradeoff",
+    "tag": "technical",
+    "difficulty": 1,
+    "text": "Explain a technical trade-off you made recently, and what you would choose differently today."
+  },
+  {
+    "id": "t-scale",
+    "tag": "technical",
+    "difficulty": 3,
+    "text": "Your system needs to handle a hundred times its current traffic in three months. What do you change first, and why?"
+  },
+  {
+    "id": "t-consistency",
+    "tag": "technical",
+    "difficulty": 3,
+    "text": "Explain how you would keep data consistent between two services that each own their own database."
+  },
+  {
+    "id": "t-testing",
+    "tag": "technical",
+    "difficulty": 2,
+    "text": "How do you decide what to test, and how do you know when a change is tested well enough to ship?"
+  }
+]

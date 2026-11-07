@@ -1,0 +1,44 @@
+{
+  "questions": [
+    {
+      "id": "b-proud",
+      "endReason": "silence",
+      "cues": [],
+      "recovery": "settled",
+      "timeToFirstWordMs": 2066,
+      "talkTimeMs": 34533,
+      "pauseCount": 1,
+      "recoveryTimeMs": 23333,
+      "pulseShown": true,
+      "breathingShown": true
+    },
+    {
+      "id": "t-consistency",
+      "endReason": "silence",
+      "cues": [
+        "A"
+      ],
+      "recovery": "settled",
+      "timeToFirstWordMs": 2265,
+      "talkTimeMs": 24933,
+      "pauseCount": 2,
+      "recoveryTimeMs": 31931,
+      "pulseShown": true,
+      "breathingShown": true
+    },
+    {
+      "id": "b-failure",
+      "endReason": "silence",
+      "cues": [],
+      "recovery": "settled",
+      "timeToFirstWordMs": 2464,
+      "talkTimeMs": 23366,
+      "pauseCount": 2,
+      "recoveryTimeMs": 7997,
+      "pulseShown": false,
+      "breathingShown": true
+    }
+  ],
+  "bandPersonal": true,
+  "hrvPresent": true
+}

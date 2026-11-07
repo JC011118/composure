@@ -31,7 +31,7 @@ const r = (x: number, digits: number): number => {
 
 /** Round and drop undefined fields to keep recordings compact and stable. */
 export function compactSample(s: SignalSample): SignalSample {
-  const out: SignalSample = { tMs: r(s.tMs, 1), sdkConfidenceOk: s.sdkConfidenceOk };
+  const out: SignalSample = { tMs: r(s.tMs, 3), sdkConfidenceOk: s.sdkConfidenceOk };
   if (s.breathingTrace !== undefined) out.breathingTrace = r(s.breathingTrace, 5);
   if (s.breathingRate !== undefined) out.breathingRate = r(s.breathingRate, 2);
   if (s.breathingRateConfidence !== undefined) out.breathingRateConfidence = r(s.breathingRateConfidence, 1);
@@ -72,7 +72,7 @@ export class RecordingTap {
         if (!this.stopped && this.samples.length < this.maxSamples) this.samples.push(compactSample(s));
       }),
       source.onStatus((st) => {
-        if (!this.stopped) this.statuses.push({ tMs: r(st.tMs, 1), code: st.code, hint: st.hint });
+        if (!this.stopped) this.statuses.push({ tMs: r(st.tMs, 3), code: st.code, hint: st.hint });
       }),
     ];
   }

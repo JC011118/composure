@@ -118,3 +118,107 @@ One policy, injected into `index.html` by a small Vite plugin. Production:
 `media-src 'self' blob: mediastream:`, `connect-src 'self'`, no objects, no
 base URI. Dev adds `'unsafe-inline'` scripts and `ws://localhost:*` for Vite's
 HMR and the React refresh preamble.
+
+## D-011 Signal check before the seated baseline
+
+The SDK needs a few seconds of camera tuning and its confidence values start
+at 0. A `signalCheck` phase (not in the brief's state list) runs before
+BaselineSeated and waits for 5 s of cumulative `sdkConfidenceOk` signal (max
+60 s, then proceeds with a debrief note). Without it the 30 s seated baseline
+would often be half warm-up on real hardware.
+
+## D-012 Baselines extend when the signal was poor
+
+If less than 60 % of a baseline phase had a usable signal, the phase extends
+in 10 s steps (max +30 s). Baseline breathing rate prefers readings at or
+above the SDK's stable confidence (45) and falls back to all clean readings
+(with a note) when the SDK's ~30 s window has not filled.
+
+## D-013 Gate "inside the band" definition
+
+The brief defines the band as seated mean ± 1.5 SD of breath period and
+amplitude. A breath takes 3-6 s, so a 5 s hold spans only one or two breaths;
+waiting for whole cycles alone would react slowly. A sample counts as inside
+when: the signal is usable; the latest half-cycle estimate (period +
+peak-to-trough amplitude) is inside the band; the current half-cycle has not
+run longer than the band allows (catches a held breath); and the trace has not
+swung beyond half the upper amplitude bound from its resting line (catches a
+deep breath). Floors stop a very regular seated baseline from producing an
+impossibly narrow band: period half-width ≥ 300 ms, amplitude half-width ≥
+10 % of the seated mean. With fewer than 6 seated half-cycles the Gate uses a
+wide fallback band (2.5-8 s, median amplitude ± 50 %) and says so. All of this
+lives in `config.ts` (`gate.*`, `cycles.*`, `baseline.*`).
+
+## D-014 Recovery time = when the final in-band streak began
+
+`recoveryTimeMs` is measured from Gate start to the start of the 5 s streak
+that unlocked the Gate (0 when the trace was already inside the band). The
+unlock itself happens 5 s later. The card reads "Recovered in N s". A
+timed-out Gate records `recoveryTimeMs = null` and "recovery: timed out".
+
+## D-015 The Gate is seeded with recent trace history
+
+At Gate start the detector is fed the last 12 s of trace (`gate.lookbackMs`)
+so the current breath cycle is already known; otherwise even a perfectly
+settled user would wait an extra breath or two. The streak still only counts
+from Gate start.
+
+## D-016 Talking is debounced
+
+`face.talking.detected` flickers frame to frame. Speech counts as started after
+150 ms of raw `true` and stopped after 350 ms of raw `false`; edges are
+back-dated to the raw transition, so "answer starts at the first talking=true"
+still holds to within a frame. Set both to 0 to get the literal behavior.
+
+## D-017 Listening rules not fully specified by the brief
+
+- Silence before the first word does not count toward cue A ("mid-answer").
+- When cue A fires, end-of-answer silence is counted from (cue time + 6 s),
+  so "Take your time." is never followed by the answer being closed (the
+  user gets ~10 s to resume).
+- Cue B condition: the answer has run 2:30 and the user is talking right now
+  (debounced). A long answer always contains short gaps, so "continuously"
+  is read as "no end-of-answer silence yet".
+- Cue A confirmation uses the SDK breathing rate over the silent span when it
+  covers ≥ 2 s; otherwise the rate implied by the trace's own breath cycles in
+  that span (the faster signal). The seated rate band is mean +
+  max(1.5 SD, 1 br/min).
+- No speech at all for 60 s closes the question ("no answer detected"); a
+  single answer is capped at 4 min. A "Done" button / Enter key ends the
+  answer manually, and the Gate has a "Skip" button (recorded as "skipped",
+  never as a recovery time). Both exist so a talking-detection miss on real
+  hardware never traps the user.
+- Answer timing: answer span = first word → last word; Listening ends when
+  end-detection fires.
+
+## D-018 Debrief metric definitions
+
+- Pulse delta = time-weighted mean of clean pulse (SDK confidence ≥ 40,
+  usable signal) over the answer span minus the TALKING baseline mean;
+  shown only if those readings cover ≥ 60 % of the answer, otherwise
+  "not enough clean signal".
+- Breathing delta = time-weighted mean SDK breathing rate over silent spans
+  (≥ 1.5 s) inside the Listening window (think time, pauses, and the closing
+  silence) minus the SEATED baseline mean; needs ≥ 5 s of covered silence.
+- Session HRV: the latest reading the SDK marked stable, else the latest
+  reading; shown once with its `stable` flag and confidence.
+- Chart series are bucketed means (10 Hz trace, 1 Hz pulse/rate); a bucket
+  with no usable sample is `null` and drawn as a gap.
+
+## D-019 Camera-free mode
+
+Camera-free mode starts no camera and no SDK. Talking comes from the keyboard
+(hold or toggle Space) via `ManualSignalSource`; samples carry
+`sdkConfidenceOk=false`, so no physiological number can appear. The signal
+check and baselines are skipped and the Gate becomes a fixed 15 s paced pause
+(`cameraFree.pauseMs`). Timing metrics (time to first word, talk time,
+pauses) still work.
+
+## D-020 Replay fixture
+
+`fixtures/replays/sim-demo-seed7.recording.json` (~2.5 MB) is a simulator
+recording of a 3-question session; the expected debrief is computed by
+replaying it, so the test is an exact regression check of the engine on fixed
+input. Timestamps are stored at 0.001 ms precision so the replay is
+frame-exact. Regenerate with `npm run fixtures:generate` after an intentional
+engine change.
