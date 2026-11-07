@@ -168,8 +168,9 @@ export function DebriefView({ record, live }: { record: SessionRecord; live: boo
           : ''}
       </h1>
       <p className="lede" style={{ fontSize: 18 }}>
-        Every number below is relative to your own baseline from this session. Spans without a clean signal
-        are shown as gaps and never counted.
+        Each change below is shown next to the baseline from this session that it is measured against; session
+        HRV is shown once as the SDK reports it. Spans without a clean signal are shown as gaps and never
+        counted.
       </p>
 
       <div className="grid-3" style={{ marginBottom: 18 }}>
