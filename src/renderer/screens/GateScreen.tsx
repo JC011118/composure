@@ -85,7 +85,14 @@ export function GateScreen({ engine, snap }: { engine: InterviewEngine; snap: En
     ) {
       breath = Math.max(-1.5, Math.min(1.5, (st.smoothed - st.center) / (band.ampHi / 2)));
     }
-    return { intensity, breath, still: false };
+    return {
+      intensity,
+      breath,
+      still: false,
+      breathKey: st?.latest?.tMs ?? null,
+      breathSize: Math.min(1, Math.max(0, dev / 2)),
+      hold: st?.holdProgress ?? 0,
+    };
   }, [engine]);
 
   const saveCard = async () => {

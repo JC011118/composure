@@ -239,6 +239,8 @@ export class SimPerson {
   private cycleJitterA = 1;
   private cycleShapeTalk = false;
   private cycleTalkPeriodMs = 4_500;
+  /** This breath is a sigh: deeper and slower (about 1 in 25 resting breaths). */
+  private cycleSigh = false;
   private ampSmooth: number | null = null;
   private talk: TalkPlanner;
   private behavior: QuestionBehavior;
@@ -370,7 +372,9 @@ export class SimPerson {
     }
 
     // --- breathing trace -------------------------------------------------
-    const quietPeriod = clamp(this.basePeriodMs * (1 - 0.32 * a) * this.cycleJitterP, 3_000, 6_500);
+    const quietPeriod =
+      clamp(this.basePeriodMs * (1 - 0.32 * a) * this.cycleJitterP, 3_000, 6_500) *
+      (this.cycleSigh ? 1.3 : 1);
     const period = this.cycleShapeTalk ? this.cycleTalkPeriodMs : quietPeriod;
     this.phase += (2 * Math.PI * dt) / period;
     if (this.phase >= 2 * Math.PI) {
@@ -379,6 +383,7 @@ export class SimPerson {
       this.cycleJitterA = clamp(1 + 0.04 * this.n(), 0.88, 1.12);
       this.cycleShapeTalk = planned;
       this.cycleTalkPeriodMs = this.u(3_500, 5_500);
+      this.cycleSigh = !planned && this.rand() < 0.04;
     }
     const x = this.phase / (2 * Math.PI);
     let shape: number;
@@ -389,7 +394,7 @@ export class SimPerson {
       amp = 0.8 * this.baseAmp * this.cycleJitterA * (1 + 0.3 * a);
     } else {
       shape = -0.5 * Math.cos(2 * Math.PI * x) + 0.04 * Math.sin(4 * Math.PI * x);
-      amp = this.baseAmp * (1 + 0.9 * a) * this.cycleJitterA;
+      amp = this.baseAmp * (1 + 0.9 * a) * this.cycleJitterA * (this.cycleSigh ? 1.8 : 1);
     }
     this.ampSmooth =
       this.ampSmooth === null ? amp : this.ampSmooth + (amp - this.ampSmooth) * (1 - Math.exp(-dt / 350));
@@ -478,7 +483,9 @@ export class SimPerson {
 
     // Pulse: rises with arousal and talking; confidence dips while talking.
     this.pulseWander += (0 - this.pulseWander) * 0.04 + 0.35 * this.n();
-    const hr = this.baseHr + 14 * a + (talkingNow ? 5 : 0) + this.pulseWander + 0.6 * this.n();
+    // Respiratory sinus arrhythmia: pulse rises on the in-breath and falls on the out-breath.
+    const rsa = 2.2 * Math.sin(this.phase);
+    const hr = this.baseHr + 14 * a + (talkingNow ? 5 : 0) + this.pulseWander + rsa + 0.6 * this.n();
     const pulseRamp = clamp(okFor / 12_000, 0, 1);
     const good = this.behavior.pulse === 'good';
     const pc = talkingNow

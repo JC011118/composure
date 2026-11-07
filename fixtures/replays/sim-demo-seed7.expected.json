@@ -6,9 +6,9 @@
       "cues": [],
       "recovery": "settled",
       "timeToFirstWordMs": 2066,
-      "talkTimeMs": 34133,
+      "talkTimeMs": 34166,
       "pauseCount": 1,
-      "recoveryTimeMs": 13367,
+      "recoveryTimeMs": 6633,
       "pulseShown": true,
       "breathingShown": true
     },
@@ -19,10 +19,10 @@
         "A"
       ],
       "recovery": "settled",
-      "timeToFirstWordMs": 2265,
-      "talkTimeMs": 24700,
+      "timeToFirstWordMs": 2432,
+      "talkTimeMs": 24466,
       "pauseCount": 2,
-      "recoveryTimeMs": 15800,
+      "recoveryTimeMs": 7833,
       "pulseShown": true,
       "breathingShown": true
     },
@@ -34,7 +34,7 @@
       "timeToFirstWordMs": 2198,
       "talkTimeMs": 23633,
       "pauseCount": 2,
-      "recoveryTimeMs": 10133,
+      "recoveryTimeMs": 6100,
       "pulseShown": false,
       "breathingShown": true
     }
