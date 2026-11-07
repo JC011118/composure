@@ -10,7 +10,8 @@
  *   - the answer starts at the first debounced talking=true
  *   - end-detection arms once the answer has run `minAnswerMs`
  *   - the answer ends after `endSilenceMs` of continuous silence following
- *     speech (counted from max(last speech end, end-clock floor))
+ *     speech, counted from max(last speech end, the moment end-detection
+ *     armed, end-clock floor) — silence before arming is not "detected"
  *   - cue A moves the end-clock floor so "Take your time." is never followed
  *     immediately by the answer being closed
  *   - hard caps: `maxAnswerMs`, and `noAnswerTimeoutMs` when no speech at all
@@ -143,7 +144,9 @@ export class AnswerTracker {
     }
     if (tMs - this.answerStartMs >= this.cfg.maxAnswerMs) return this.end(tMs, 'maxLength');
     if (this.openSegStart === null && this.lastTalkEndMs !== null && this.armed(tMs)) {
-      const ref = Math.max(this.lastTalkEndMs, this.endClockFloorMs);
+      // Silence only counts once end-detection is armed (and after any cue grace).
+      const armMs = this.answerStartMs + this.cfg.minAnswerMs;
+      const ref = Math.max(this.lastTalkEndMs, armMs, this.endClockFloorMs);
       if (tMs - ref >= this.cfg.endSilenceMs) return this.end(tMs, 'silence');
     }
     return null;

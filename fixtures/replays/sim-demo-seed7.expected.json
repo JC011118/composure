@@ -6,9 +6,9 @@
       "cues": [],
       "recovery": "settled",
       "timeToFirstWordMs": 2066,
-      "talkTimeMs": 34533,
+      "talkTimeMs": 34133,
       "pauseCount": 1,
-      "recoveryTimeMs": 23333,
+      "recoveryTimeMs": 13367,
       "pulseShown": true,
       "breathingShown": true
     },
@@ -20,9 +20,9 @@
       ],
       "recovery": "settled",
       "timeToFirstWordMs": 2265,
-      "talkTimeMs": 24933,
+      "talkTimeMs": 24700,
       "pauseCount": 2,
-      "recoveryTimeMs": 31931,
+      "recoveryTimeMs": 16965,
       "pulseShown": true,
       "breathingShown": true
     },
@@ -31,10 +31,10 @@
       "endReason": "silence",
       "cues": [],
       "recovery": "settled",
-      "timeToFirstWordMs": 2464,
-      "talkTimeMs": 23366,
+      "timeToFirstWordMs": 2198,
+      "talkTimeMs": 23633,
       "pauseCount": 2,
-      "recoveryTimeMs": 7997,
+      "recoveryTimeMs": 9797,
       "pulseShown": false,
       "breathingShown": true
     }

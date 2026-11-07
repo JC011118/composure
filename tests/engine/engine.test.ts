@@ -127,8 +127,16 @@ describe('InterviewEngine state machine', () => {
   it('cue A: one "Take your time." on a long silence with breathing above the seated band', () => {
     const talking = (_t: number, c: Ctx) =>
       c.phase === 'baselineTalking' || listening(c, 1_000, 3_000) || listening(c, 14_000, 26_000);
+    // Breathing speeds up (4 s → 2.5 s breaths) during the silence.
+    let phase = 0;
+    let last = 0;
+    const trace = (t: number, c: Ctx) => {
+      phase += (2 * Math.PI * (t - last)) / (listening(c, 3_000, 14_000) ? 2_500 : 4_000);
+      last = t;
+      return Math.sin(phase);
+    };
     const run = new ScriptedRun(
-      { talking, rate: (_t, c) => (listening(c, 3_000, 14_000) ? 19 : 14) },
+      { talking, trace, rate: (_t, c) => (listening(c, 3_000, 14_000) ? 19 : 14) },
       { questions: 1 },
     );
     run.engine.begin(0);
@@ -249,6 +257,17 @@ describe('InterviewEngine state machine', () => {
     expect(run.engine.snapshotNow().results[0].recovery).toBe('skipped');
     run.engine.continueAfterGate(run.t + 20);
     expect(run.engine.currentPhase).toBe('asking');
+  });
+
+  it('ending early goes to the debrief with completed questions only', () => {
+    const run = new ScriptedRun({ talking: normalTalk }, { questions: 3 });
+    run.engine.begin(0);
+    run.runUntil(() => run.engine.snapshotNow().results.length === 1, 300_000);
+    run.engine.endSession(run.t);
+    expect(run.engine.currentPhase).toBe('debrief');
+    const snap = run.engine.snapshotNow();
+    expect(snap.results).toHaveLength(1);
+    expect(snap.notes.some((n) => n.includes('ended early'))).toBe(true);
   });
 
   it('camera-free mode: no baselines, paced pause, no physiology', () => {

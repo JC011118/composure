@@ -35,11 +35,12 @@ function gateOver(
 describe('computeBand', () => {
   it('is seated mean ± 1.5 SD with floors', () => {
     expect(BAND.personal).toBe(true);
-    expect(BAND.periodLoMs).toBe(3_700);
-    expect(BAND.periodHiMs).toBe(4_300);
-    // 1.5 × 0.1 = 0.15 is below the 10 % floor (0.2), so the floor wins.
-    expect(BAND.ampLo).toBeCloseTo(1.8);
-    expect(BAND.ampHi).toBeCloseTo(2.2);
+    // 1.5 × 200 ms = 300 ms is below the 400 ms floor, so the floor wins.
+    expect(BAND.periodLoMs).toBe(3_600);
+    expect(BAND.periodHiMs).toBe(4_400);
+    // 1.5 × 0.1 = 0.15 is below the 15 % floor (0.3), so the floor wins.
+    expect(BAND.ampLo).toBeCloseTo(1.7);
+    expect(BAND.ampHi).toBeCloseTo(2.3);
     const wide = computeBand(
       { ...SEATED, periodSdMs: 600, ampSd: 0.4 },
       DEFAULT_CONFIG.gate,

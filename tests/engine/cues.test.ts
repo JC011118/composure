@@ -40,10 +40,16 @@ describe('cue A', () => {
     expect(decideCueA({ ...base, alreadyFired: true }, A).fire).toBe(false);
   });
 
-  it('falls back to the trace-derived rate when SDK rate coverage is thin', () => {
+  it('prefers the rate measured from breath cycles inside the silent span', () => {
     const d = decideCueA({ ...base, sdkRateCoveredMs: 500, traceRate: 19 }, A);
     expect(d.fire).toBe(true);
     expect(d.source).toBe('trace');
+    // The lagging SDK rate does not override an in-band trace rate.
+    expect(decideCueA({ ...base, traceRate: 14.2 }, A)).toMatchObject({ fire: false, source: 'trace' });
+  });
+
+  it('falls back to the SDK rate when no breath cycles completed, if it covers the span', () => {
+    expect(decideCueA({ ...base, traceRate: null }, A)).toMatchObject({ fire: true, source: 'sdk' });
     expect(decideCueA({ ...base, sdkRateCoveredMs: 500, traceRate: null }, A).fire).toBe(false);
   });
 

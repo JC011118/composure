@@ -57,7 +57,8 @@ describe('AnswerTracker', () => {
   });
 
   it('does not arm end-detection before the 10 s minimum answer length', () => {
-    // Speaks 1-3 s, then silent. Silence reaches 4 s at 7 s, but the answer can only end once armed at 11 s.
+    // Speaks 1-3 s, then silent. Silence reaches 4 s at 7 s, but end-detection only arms at 11 s
+    // and then needs 4 s of silence while armed: the answer ends at 15 s.
     let endedBeforeArm = false;
     const tr = simulate(
       (t) => t >= 1_000 && t < 3_000,
@@ -67,9 +68,10 @@ describe('AnswerTracker', () => {
       },
     );
     expect(endedBeforeArm).toBe(false);
+    expect(tr.armed(11_100)).toBe(true);
     expect(tr.ended?.reason).toBe('silence');
-    expect(tr.ended?.tMs as number).toBeGreaterThanOrEqual(11_000);
-    expect(tr.ended?.tMs as number).toBeLessThan(11_100);
+    expect(tr.ended?.tMs as number).toBeGreaterThanOrEqual(15_000);
+    expect(tr.ended?.tMs as number).toBeLessThan(15_100);
   });
 
   it('cue A pushes the end clock out so the answer is not closed right after the cue', () => {

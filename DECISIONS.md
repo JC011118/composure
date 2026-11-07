@@ -144,8 +144,11 @@ peak-to-trough amplitude) is inside the band; the current half-cycle has not
 run longer than the band allows (catches a held breath); and the trace has not
 swung beyond half the upper amplitude bound from its resting line (catches a
 deep breath). Floors stop a very regular seated baseline from producing an
-impossibly narrow band: period half-width ≥ 300 ms, amplitude half-width ≥
-10 % of the seated mean. With fewer than 6 seated half-cycles the Gate uses a
+impossibly narrow band: period half-width ≥ 400 ms, amplitude half-width ≥
+15 % of the seated mean (raised from 300 ms / 10 % after simulator runs showed
+a settled breather flickering in and out of a 10 % band for 30+ s; a 30 s
+baseline yields only ~12-15 half-cycles, so its mean alone is uncertain by
+about a quarter of an SD). With fewer than 6 seated half-cycles the Gate uses a
 wide fallback band (2.5-8 s, median amplitude ± 50 %) and says so. All of this
 lives in `config.ts` (`gate.*`, `cycles.*`, `baseline.*`).
 
@@ -173,16 +176,25 @@ still holds to within a frame. Set both to 0 to get the literal behavior.
 ## D-017 Listening rules not fully specified by the brief
 
 - Silence before the first word does not count toward cue A ("mid-answer").
+- End-detection silence is counted from max(last speech end, the moment
+  end-detection arms at answer start + 10 s). With the literal reading
+  (silence accumulated before arming counts), any silence that began early in
+  the answer closed the answer the instant it armed, leaving cue A a window of
+  about 1.5 s — found in the first full simulator run, where a hesitant answer
+  was closed after its 2 s opener.
 - When cue A fires, end-of-answer silence is counted from (cue time + 6 s),
   so "Take your time." is never followed by the answer being closed (the
   user gets ~10 s to resume).
 - Cue B condition: the answer has run 2:30 and the user is talking right now
   (debounced). A long answer always contains short gaps, so "continuously"
   is read as "no end-of-answer silence yet".
-- Cue A confirmation uses the SDK breathing rate over the silent span when it
-  covers ≥ 2 s; otherwise the rate implied by the trace's own breath cycles in
-  that span (the faster signal). The seated rate band is mean +
-  max(1.5 SD, 1 br/min).
+- Cue A confirmation prefers the rate implied by the trace's own breath
+  cycles inside the silent span (≥ 2 half-cycles): it is literally "measured
+  over the silent span". The SDK's `breathing.rate` is computed over a ~30 s
+  window, so 6-10 s into a silence it mostly reflects the time before it; it is
+  the fallback when no cycles completed (needs ≥ 2 s of readings). The seated
+  rate band is mean + max(1.5 SD, 1 br/min); if the seated SDK rate is missing
+  it is derived from the seated breath period.
 - No speech at all for 60 s closes the question ("no answer detected"); a
   single answer is capped at 4 min. A "Done" button / Enter key ends the
   answer manually, and the Gate has a "Skip" button (recorded as "skipped",
@@ -222,3 +234,39 @@ replaying it, so the test is an exact regression check of the engine on fixed
 input. Timestamps are stored at 0.001 ms precision so the replay is
 frame-exact. Regenerate with `npm run fixtures:generate` after an intentional
 engine change.
+
+## D-021 UI architecture
+
+The renderer never re-renders React per sample: live canvases (trace, water)
+read the engine's live buffer on each animation frame; React re-renders from
+the engine snapshot, which is throttled to 10 Hz of engine time plus every
+event. The HUD store is coalesced to 10 Hz. Speech goes through
+`window.speechSynthesis` (local voices); when it never reports an end (no
+voices, e.g. headless Linux) the engine's per-utterance fallback timer moves
+on. Enter = "Done answering"; Space = talking in camera-free mode.
+
+## D-022 SDK telemetry toggle defaults ON, LLM Insights default OFF
+
+The SDK's telemetry is aggregate-only, opt-out by design, and Presage asks
+integrators to disclose it; the consent screen discloses it, links the
+telemetry page, and offers the opt-out (passed as `enableTelemetry`). LLM
+Insights is a cloud call that sends derived values and our prompt, so it is
+opt-in and off by default. When on, one on-demand summary is requested at the
+debrief and the camera stays on until it arrives (max 25 s). Replies are passed
+through `redactBannedTerms`. Auto-fired vitals insights (which the SDK sends
+on its own per its docs) are never displayed.
+
+## D-023 HUD shows the mode at all times
+
+The HUD lists the raw SDK field names (`face.talking.detected`,
+`breathing.rate`, `cardio.pulseRate` + confidence, `validationStatus`) with
+current values. In simulator/replay/camera-free modes the badge says so
+("SIMULATED · synthetic signals, not a measurement"), so a demo video can
+never pass simulated numbers off as SDK output.
+
+## D-024 Recovered card PNG
+
+Rendered on an offscreen 1200×630 canvas (share-card size) from the saved
+series: headline, question text, the Gate-period breathing trace, talk time and
+pauses, and the pulse delta only when it was shown in the debrief. No camera
+imagery. Saved through a native save dialog.

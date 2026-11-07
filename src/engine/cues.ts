@@ -3,10 +3,11 @@
  *
  * Cue A — "Take your time." (max once per question)
  *   trigger (fast): mid-answer silence longer than cueA.silenceMs
- *   confirm (slow): breathing rate measured over that silent span is above the
- *   SEATED baseline band (mean + max(k·SD, floor)). The SDK's breathing rate is
- *   used when it covers enough of the span; otherwise the rate implied by the
- *   trace's own breath cycles in the span is used.
+ *   confirm (slower): breathing rate measured over that silent span is above
+ *   the SEATED baseline band (mean + max(k·SD, floor)). The rate implied by the
+ *   trace's own breath cycles inside the span is preferred (it is measured over
+ *   the span itself); the SDK's breathing rate, which is computed over a ~30 s
+ *   window and lags, is the fallback when fewer than two cycles completed.
  *
  * Cue B — "Let me stop you there — can you summarize in one sentence?"
  *   trigger: the answer has been going for cueB.talkMs and the user is still
@@ -55,12 +56,12 @@ export function decideCueA(input: CueAInput, cfg: CueAConfig): CueADecision {
   const upper = rateBandUpper(input.seatedRate, cfg);
   let rate: number | null = null;
   let source: CueADecision['source'] = null;
-  if (input.sdkRateMean !== null && input.sdkRateCoveredMs >= cfg.minRateCoverageMs) {
-    rate = input.sdkRateMean;
-    source = 'sdk';
-  } else if (input.traceRate !== null) {
+  if (input.traceRate !== null) {
     rate = input.traceRate;
     source = 'trace';
+  } else if (input.sdkRateMean !== null && input.sdkRateCoveredMs >= cfg.minRateCoverageMs) {
+    rate = input.sdkRateMean;
+    source = 'sdk';
   }
   if (rate === null) return { fire: false, rate: null, upper, source: null };
   return { fire: rate > upper, rate, upper, source };

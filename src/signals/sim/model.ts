@@ -239,6 +239,7 @@ export class SimPerson {
   private cycleJitterA = 1;
   private cycleShapeTalk = false;
   private cycleTalkPeriodMs = 4_500;
+  private ampSmooth: number | null = null;
   private talk: TalkPlanner;
   private behavior: QuestionBehavior;
   private questionIndex = 0;
@@ -301,6 +302,8 @@ export class SimPerson {
   observe(e: EngineEvent): void {
     switch (e.type) {
       case 'phase':
+        // A phase change ends any held silence; do not let it override the new phase's target.
+        this.wasHolding = false;
         this.questionIndex = e.questionIndex;
         this.behavior = behaviorFor(this.scenario, Math.max(0, e.questionIndex));
         switch (e.phase) {
@@ -372,8 +375,8 @@ export class SimPerson {
     this.phase += (2 * Math.PI * dt) / period;
     if (this.phase >= 2 * Math.PI) {
       this.phase -= 2 * Math.PI;
-      this.cycleJitterP = clamp(1 + 0.06 * this.n(), 0.85, 1.15);
-      this.cycleJitterA = clamp(1 + 0.06 * this.n(), 0.85, 1.15);
+      this.cycleJitterP = clamp(1 + 0.04 * this.n(), 0.88, 1.12);
+      this.cycleJitterA = clamp(1 + 0.04 * this.n(), 0.88, 1.12);
       this.cycleShapeTalk = planned;
       this.cycleTalkPeriodMs = this.u(3_500, 5_500);
     }
@@ -388,6 +391,9 @@ export class SimPerson {
       shape = -0.5 * Math.cos(2 * Math.PI * x) + 0.04 * Math.sin(4 * Math.PI * x);
       amp = this.baseAmp * (1 + 0.9 * a) * this.cycleJitterA;
     }
+    this.ampSmooth =
+      this.ampSmooth === null ? amp : this.ampSmooth + (amp - this.ampSmooth) * (1 - Math.exp(-dt / 350));
+    amp = this.ampSmooth;
     const wander =
       0.12 * this.baseAmp * Math.sin((2 * Math.PI * t) / 41_000 + this.wanderPhase[0]) +
       0.05 * this.baseAmp * Math.sin((2 * Math.PI * t) / 17_000 + this.wanderPhase[1]);

@@ -342,6 +342,19 @@ export class InterviewEngine {
     }
   }
 
+  /** The user ended the session early: go to the debrief with the questions completed so far. */
+  endSession(tMs: number): void {
+    this.nowMs = Math.max(this.nowMs, tMs);
+    if (this.phase === 'consent' || this.phase === 'debrief') return;
+    if (this.questions.length > this.results.length) {
+      this.notes.push(
+        `Session ended early after ${this.results.length} of ${this.questions.length} questions.`,
+      );
+    }
+    this.speaking = null;
+    this.enterDebrief(this.nowMs);
+  }
+
   buildRecord(meta: SessionMeta, insights: InsightRecord[] = []): SessionRecord {
     return {
       format: 'composure-session',
@@ -562,7 +575,7 @@ export class InterviewEngine {
           alreadyFired: false,
           talking: tr.talking,
           silenceMs,
-          seatedRate: this.seated?.breathingRate ?? null,
+          seatedRate: this.seatedRateForCues(),
           sdkRateMean: sdk.mean,
           sdkRateCoveredMs: sdk.coveredMs,
           traceRate,
@@ -585,6 +598,15 @@ export class InterviewEngine {
 
     const end = tr.check(t);
     if (end) this.enterGate(end.tMs, end.reason);
+  }
+
+  /** Seated breathing-rate stats for cue A; derived from the seated breath period if the SDK rate is missing. */
+  private seatedRateForCues(): { mean: number; sd: number; n: number } | null {
+    if (this.seated?.breathingRate) return this.seated.breathingRate;
+    const b = this.seated?.breath;
+    if (!b || b.nEstimates < 2) return null;
+    const m = 60_000 / b.periodMeanMs;
+    return { mean: m, sd: (m * b.periodSdMs) / b.periodMeanMs, n: b.nEstimates };
   }
 
   private fireCue(event: CueEvent, text: string): void {
