@@ -49,6 +49,7 @@ export function InterviewScreen({ engine, snap }: { engine: InterviewEngine; sna
     return () => {
       window.removeEventListener('keydown', down);
       window.removeEventListener('keyup', up);
+      if (cameraFree) controller.setManualTalking(false);
     };
   }, [controller, cameraFree]);
 

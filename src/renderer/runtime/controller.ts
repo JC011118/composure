@@ -126,6 +126,8 @@ export class SessionController {
   private recordForSave: SessionRecord | null = null;
   /** Increments per session so late async work from an old session cannot touch a new one. */
   private generation = 0;
+  /** Teardown of the previous source; a new session waits for it (the SDK is process-global). */
+  private pendingStop: Promise<void> | null = null;
 
   async init(): Promise<void> {
     const bridge = window.composure;
@@ -167,6 +169,8 @@ export class SessionController {
     this.recordForSave = null;
     this.generation++;
 
+    if (this.pendingStop) await this.pendingStop;
+
     let source: SignalSource;
     try {
       source = await this.createSource(boot, opts);
@@ -195,8 +199,12 @@ export class SessionController {
         this.queueHud({ ...(this.hudPending ?? this.hud.get()), status: st });
       }),
       source.onError((err) => {
-        if (err.fatal) void this.abortWithError(err.message);
-        else this.patch({ sourceError: err.message });
+        // After the debrief exists, never throw it away: just stop the source.
+        if (err.fatal && this.engine?.currentPhase !== 'debrief') void this.abortWithError(err.message);
+        else {
+          this.patch({ sourceError: err.message });
+          if (err.fatal) void this.stopSource();
+        }
       }),
     );
     if (source.onPreviewStream)
@@ -256,6 +264,10 @@ export class SessionController {
 
   private onEngineEvent(e: EngineEvent): void {
     this.source?.observeEngine?.(e);
+    // Camera-free: a Space key still held when an answer ends must not leak into the next one.
+    if (e.type === 'phase' && e.phase !== 'listening' && this.source instanceof ManualSignalSource) {
+      this.setManualTalking(false);
+    }
     const engine = this.engine;
     if (e.type === 'speak' && engine) {
       const id = e.id;
@@ -417,6 +429,9 @@ export class SessionController {
     await this.stopSource();
     this.teardownSource();
     this.engineStore.set(null);
+    if (this.hudTimer) clearTimeout(this.hudTimer);
+    this.hudTimer = null;
+    this.hudPending = null;
     this.hud.set(IDLE_HUD);
     this.patch({
       screen: 'consent',
@@ -430,14 +445,17 @@ export class SessionController {
     this.tickTimer = null;
     const src = this.source;
     if (src) {
-      try {
-        await src.stop();
-      } catch (err) {
-        console.warn('[composure] source stop failed', err);
-      }
+      const stopping = src
+        .stop()
+        .catch((err: unknown) => console.warn('[composure] source stop failed', err));
+      this.pendingStop = stopping;
+      await stopping;
+      if (this.pendingStop === stopping) this.pendingStop = null;
     }
-    this.preview.set(null);
-    this.patch({ cameraActive: false });
+    if (this.source === src) {
+      this.preview.set(null);
+      this.patch({ cameraActive: false });
+    }
   }
 
   private teardownSource(): void {

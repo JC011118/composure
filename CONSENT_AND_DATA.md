@@ -32,7 +32,7 @@ informational purposes only and are not cleared by the FDA.
    notifications, and every other permission are denied. Talking is detected
    visually by the SDK; no audio is captured.
 5. **Always visible, always stoppable.** While the camera is on, the HUD shows
-   `camera: on · frames stay in memory`. Every screen has a way out ("Stop and
+   `camera on · frames stay in memory` with a red dot. Every screen has a way out ("Stop and
    turn off camera" or "End session"). The camera is released when the
    session reaches the debrief (or when an LLM Insights reply arrives, at most
    25 s later, if you opted in), when you end early, or when the SDK reports

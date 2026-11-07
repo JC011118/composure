@@ -77,7 +77,7 @@ Decided once at startup in `src/main/cli.ts`:
 | `PRESAGE_API_KEY` (or `SMARTSPECTRA_API_KEY`) not set | Simulator |
 | Otherwise | Real mode: SmartSpectra SDK + camera |
 
-The HUD in the bottom-right corner always says which mode is running
+The HUD strip along the bottom of every screen always says which mode is running
 (`SDK LIVE`, `SIMULATED`, `REPLAY`, or `CAMERA OFF`). The consent screen also
 offers **camera-free mode**: no camera and no SDK. You hold Space while you
 speak, the Gate becomes a 15 s paced pause, and the debrief shows timing only.

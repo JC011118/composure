@@ -391,3 +391,18 @@ with regression tests where testable:
 - Verified on a packaged Linux build with Chromium's fake camera
   (`node scripts/smoke-sim.mjs --real --packaged`): the exact `file://` page
   gets the key and the camera; frames reach the bundled runtime.
+
+## D-035 Fixes from the independent review (runtime lens)
+
+- `PresageSignalSource.stop()` keeps its in-flight teardown and every caller
+  waits for it; the controller also waits for the previous source's teardown
+  before starting a new session. The SDK's preload bridge holds one port per
+  window, so a new SDK built while the old one was still draining could be
+  killed by the old one's `destroy()`.
+- Leaving a session clears any queued HUD update, so the HUD never shows a
+  stale mode badge or values after returning to the start screen.
+- Camera-free: manual talking is reset on every phase change other than
+  Listening (and when the interview screen unmounts), so a Space key held
+  through the end of an answer cannot leak into the next question.
+- A fatal SDK error after the debrief exists no longer discards it; the
+  source is stopped and the error is shown as a banner.

@@ -38,8 +38,8 @@ as if it were real; the HUD would say `SIMULATED` anyway.
 
 | Time | Shot | What happens on screen | You do / say |
 | --- | --- | --- | --- |
-| 0:00–0:14 | **Cold open: the Gate settling** (full window, HUD bottom-right) | Ripples on the water, the trace outside the band; status reads e.g. "Breaths are deeper than your seated band". The trace slides into the shaded band, the hold bar fills, the water goes glassy, and the **"Recovered in N s"** card fades in. | Sit still and breathe normally. Silent. |
-| 0:14–0:20 | **Push-in on the HUD** (zoom in the edit) | `face.talking.detected false`, `breathing.rate 14.1 /min · conf 82`, `cardio.pulseRate 71 bpm · conf 88`, `validationStatus ● kOk`, badge `SDK LIVE`. | — |
+| 0:00–0:14 | **Cold open: the Gate settling** (full window, HUD strip along the bottom) | Ripples on the water, the trace outside the band; status reads e.g. "Breaths are deeper than your seated band". The trace slides into the shaded band, the hold bar fills, the water goes glassy, and the **"Recovered in N s"** card fades in. | Sit still and breathe normally. Silent. |
+| 0:14–0:20 | **Push-in on the HUD strip** (zoom in the edit) | `SDK LIVE`, `face.talking.detected false`, `breathing.rate 14.1/min conf 82`, `cardio.pulseRate 71 bpm conf 88`, `validationStatus ● kOk`, `camera on · frames stay in memory`. | — |
 | 0:20–0:26 | Card → **Next question** | Click **Next question** (or let the 6 s countdown run). | Caption: *"The next question waits until your breathing is back in your own band."* |
 | 0:26–0:34 | **The hard question** | Interviewer reads Question 2 aloud (e.g. "Tell me about a time you failed to deliver something you committed to…"). | Listen. |
 | 0:34–0:46 | **Freeze → cue** | Listening indicator: "Listening…", then "Paused 3 s… 6 s…". At ~6–8 s of silence the interviewer says **"Take your time."** and the transcript line updates. | Start: "That's… a good question." Then **stop talking for 8–10 s**, looking at the screen, breathing a little quicker than at rest (it happens naturally after a hard question; don't force it). |

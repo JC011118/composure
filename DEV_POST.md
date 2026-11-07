@@ -45,7 +45,7 @@ rehearsal tool, not a medical device.
 🎥 **Video:** `[VIDEO LINK]`
 
 The 90-second demo opens on the Gate settling: the water stilling as the
-breathing trace slides back into the band, the HUD in the corner showing the
+breathing trace slides back into the band, the HUD strip along the bottom showing the
 live SDK fields. Then one hard question, a long silence, the interviewer's
 "Take your time.", the answer, the Gate unlocking ("Recovered in N s"), and the
 debrief. The full shot list is in

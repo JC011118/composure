@@ -98,6 +98,8 @@ export class PresageSignalSource implements SignalSource {
   private lastStatusCode = -1;
   private running = false;
   private gotMetrics = false;
+  /** In-flight teardown; every stop() caller waits for the same full teardown. */
+  private stopping: Promise<void> | null = null;
   readonly insights: InsightChannel;
 
   constructor(private readonly opts: PresageSourceOptions) {
@@ -185,20 +187,28 @@ export class PresageSignalSource implements SignalSource {
   }
 
   async stop(): Promise<void> {
+    if (this.stopping) return this.stopping;
     const sdk = this.sdk;
+    if (!sdk) return;
     this.sdk = null;
     this.running = false;
     this.normalizer.setStatusOk(false);
-    if (!sdk) return;
+    this.stopping = (async () => {
+      try {
+        await sdk.stop(); // releases the SDK-acquired camera; can take seconds to drain
+      } catch (err) {
+        console.warn('[composure] SDK stop failed', err);
+      }
+      try {
+        sdk.destroy();
+      } catch {
+        /* idempotent */
+      }
+    })();
     try {
-      await sdk.stop(); // releases the SDK-acquired camera
-    } catch (err) {
-      console.warn('[composure] SDK stop failed', err);
-    }
-    try {
-      sdk.destroy();
-    } catch {
-      /* idempotent */
+      await this.stopping;
+    } finally {
+      this.stopping = null;
     }
   }
 
