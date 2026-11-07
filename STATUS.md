@@ -53,3 +53,34 @@ with exactly what was verified, what was not, and the first commands to run.
 - LLM Insights request/decode path is unit-tested (prompt contents, Insight
   protobuf decoding) but was not exercised against Presage's service (blocked
   network here).
+
+## Milestone 8 — headless SDK check (`node scripts/headless-check.mjs`)
+
+Run in the Linux x64 build container (glibc 2.39) with `PRESAGE_API_KEY` set,
+2026-11-07, SDK 3.4.0, synthetic frames via `useCustomInput()`/`sendFrame()`:
+
+```json
+{
+  "processingStatus": ["kIdle", "kStarting", "kError"],
+  "framesSent": 313,
+  "framesAccepted": 313,
+  "metricsEvents": 0,
+  "errors": ["kNetworkError (5): A network error occurred during SmartSpectra processing. [retryable]"],
+  "verdict": "SDK loaded and started, then reported an error (see errors)"
+}
+```
+
+- Verified: the native runtime (`@smartspectra/node-sdk-linux-x64`) loads via
+  koffi; the SDK constructs, accepts custom-input frames, and emits
+  processingStatus and error events.
+- Not verified: the `metrics` event. The SDK fetches model metadata and
+  validates usage against Presage's servers at start (its log shows
+  `POST /device/pair` and "Usage verification failed"), and this container's
+  network policy blocks those hosts (`cont-api.physiology.presagetech.com`).
+- No sample footage: the SmartSpectra GitHub repo ships no test video (its
+  headless-testing guide says to supply your own 30-60 s clip). Run
+  `node scripts/headless-check.mjs --video=<clip.mp4>` with a clip of your own
+  face to see pulse and breathing decode.
+- Side observation: the SDK logs that it tries to load an
+  `expressions-inference` model even though Composure does not request the
+  EXPRESSIONS metric; Composure never reads or shows expression output.
