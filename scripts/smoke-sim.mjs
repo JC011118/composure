@@ -10,6 +10,7 @@
  *   node scripts/smoke-sim.mjs                       # boot check only
  *   node scripts/smoke-sim.mjs --full --speed=8      # drive consent → debrief
  *   node scripts/smoke-sim.mjs --shots=out/shots     # screenshot directory
+ *   node scripts/smoke-sim.mjs --camera-free          # camera-free session driven with the Space key
  *   node scripts/smoke-sim.mjs --real --observe=40    # REAL mode with Chromium's fake camera:
  *                                                     # checks the SDK wiring end to end (needs PRESAGE_API_KEY)
  *
@@ -35,8 +36,11 @@ const SHOTS = String(flag('shots', 'out/smoke'));
 const PORT = Number(flag('port', 9333));
 const SCENARIO = String(flag('scenario', 'demo'));
 const REAL = Boolean(flag('real', false));
+const CAMERA_FREE = Boolean(flag('camera-free', false));
 const OBSERVE_S = Number(flag('observe', 40));
-const TIMEOUT_MS = Number(flag('timeout', FULL ? 420_000 : REAL ? OBSERVE_S * 1000 + 90_000 : 90_000));
+const TIMEOUT_MS = Number(
+  flag('timeout', FULL ? 420_000 : REAL ? OBSERVE_S * 1000 + 90_000 : CAMERA_FREE ? 240_000 : 90_000),
+);
 
 let chromium;
 try {
@@ -129,6 +133,9 @@ async function main() {
 
   if (FULL) {
     await driveFullSession(page);
+    await exerciseSavedSessions(page);
+  } else if (CAMERA_FREE) {
+    await driveCameraFree(page);
   } else if (REAL) {
     await observeReal(page);
   }
@@ -168,6 +175,65 @@ async function observeReal(page) {
   console.log('smoke-real: app log (SDK lines):\n  ' + tail.join('\n  '));
 }
 
+async function exerciseSavedSessions(page) {
+  await page.click('[data-testid="save-session"]');
+  await page.waitForSelector('text=Session saved', { timeout: 10_000 });
+  console.log('smoke-sim: session saved');
+  await page.click('text=New session');
+  await page.waitForSelector('[data-screen="consent"]');
+  console.log('smoke-sim: back at consent');
+  await page.click('button:has-text("Saved sessions")');
+  await page.waitForSelector('[data-screen="sessions"]');
+  console.log('smoke-sim: sessions list shown');
+  const rows = await page.$$('.session-row');
+  if (rows.length < 1) throw new Error('saved session not listed');
+  console.log(`smoke-sim: ${rows.length} saved session(s) listed`);
+  await page.click('.session-row >> button:has-text("Open")');
+  await page.waitForSelector('[data-screen="debrief"]');
+  console.log('smoke-sim: saved debrief opened');
+  await page.screenshot({ path: path.join(SHOTS, '20-saved-debrief.png') });
+  page.once('dialog', (d) => void d.accept());
+  await page.click('button:has-text("Delete this session")');
+  await page.waitForSelector('[data-screen="sessions"]');
+  const after = await page.$$('.session-row');
+  if (after.length !== rows.length - 1) throw new Error('delete did not remove the session');
+  console.log('smoke-sim: saved session opened and deleted');
+}
+
+async function driveCameraFree(page) {
+  await page.click('.segmented >> text=2');
+  await page.check('[data-testid="consent-camerafree"]');
+  await page.check('[data-testid="consent-optin"]');
+  await page.click('[data-testid="consent-begin"]');
+  const seen = new Set();
+  let shot = 30;
+  while (Date.now() < deadline) {
+    const screen = await page.getAttribute('[data-screen]', 'data-screen').catch(() => null);
+    if (screen && !seen.has(screen)) {
+      seen.add(screen);
+      console.log(`smoke-cf: reached ${screen}`);
+      await page.screenshot({ path: path.join(SHOTS, `${shot++}-cf-${screen}.png`) });
+    }
+    if (screen === 'debrief') break;
+    if (screen === 'interview') {
+      const line = (await page.textContent('[data-testid="listening"]').catch(() => '')) ?? '';
+      if (/Hold Space/.test(line)) {
+        // Answer for 12 s by holding Space, then stay quiet.
+        await page.keyboard.down('Space');
+        await sleep(12_000);
+        await page.keyboard.up('Space');
+      }
+    }
+    await sleep(500);
+  }
+  if (!seen.has('debrief')) throw new Error(`camera-free never reached debrief; saw ${[...seen].join(', ')}`);
+  const text = (await page.textContent('[data-screen="debrief"]')) ?? '';
+  if (!/paced pause/.test(text)) throw new Error('camera-free debrief should show paced pauses');
+  if (/bpm vs/.test(text) && !/camera off/.test(text))
+    throw new Error('camera-free debrief must not show pulse numbers');
+  console.log('smoke-cf: camera-free session reached the debrief with paced pauses and no physiology');
+}
+
 async function driveFullSession(page) {
   const seen = new Set();
   // Consent: opt in and begin.
@@ -183,6 +249,16 @@ async function driveFullSession(page) {
       await page.screenshot({ path: path.join(SHOTS, `${String(shot++).padStart(2, '0')}-${screen}.png`) });
     }
     if (screen === 'debrief') break;
+    if (screen === 'gate' && !seen.has('recovered-card')) {
+      const card = await page.$('[data-testid="recovered-card"]');
+      if (card) {
+        seen.add('recovered-card');
+        await sleep(700);
+        await page.screenshot({
+          path: path.join(SHOTS, `${String(shot++).padStart(2, '0')}-gate-recovered.png`),
+        });
+      }
+    }
     await sleep(500);
   }
   if (!seen.has('debrief')) throw new Error(`never reached debrief; saw ${[...seen].join(', ')}`);

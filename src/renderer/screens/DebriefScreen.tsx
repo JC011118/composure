@@ -295,7 +295,10 @@ export function DebriefView({ record, live }: { record: SessionRecord; live: boo
             <button
               type="button"
               className="btn ghost"
-              onClick={() => void controller.deleteSaved(record.id)}
+              onClick={() => {
+                if (window.confirm('Delete this saved session? This removes the file.'))
+                  void controller.deleteSaved(record.id);
+              }}
             >
               Delete this session
             </button>

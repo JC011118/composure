@@ -40,3 +40,16 @@ with exactly what was verified, what was not, and the first commands to run.
 - `npx electron-forge package` (Linux x64) succeeds; the packaged app contains
   the SDK JS closure in app.asar (koffi unpacked) and the native runtime as an
   extra resource, and boots in real mode pointing `SMARTSPECTRA_CAPI_PATH` at it.
+
+## Milestone 7 — debrief, sessions, insights
+
+- Debrief per question (timing, pauses, recovery, pulse/breathing deltas or
+  "not enough clean signal", gap-preserving charts), session HRV once,
+  LLM Insights section (opt-in, real mode only).
+- Smoke-verified in Electron: Save session → listed in Saved sessions →
+  opened → deleted (`node scripts/smoke-sim.mjs --full`), and a camera-free
+  session driven with the Space key reaches a debrief with paced pauses and no
+  physiological numbers (`node scripts/smoke-sim.mjs --camera-free`).
+- LLM Insights request/decode path is unit-tested (prompt contents, Insight
+  protobuf decoding) but was not exercised against Presage's service (blocked
+  network here).
