@@ -23,7 +23,7 @@ first; then MORNING_CHECKLIST.md.
 
 | What | How | Result |
 | --- | --- | --- |
-| Unit and integration tests | `npm test` | 20 files, 310+ tests, all passing |
+| Unit and integration tests | `npm test` | 20 files, 313 tests, all passing |
 | Lint + typecheck (incl. no-DOM engine typecheck) | `npm run lint` | clean |
 | Banned words absent from every source/doc file | `tests/bannedWords.test.ts` | passing |
 | Engine purity; SDK imported only in PresageSignalSource (+ main/preload wiring) | `tests/architecture.test.ts` | passing |
@@ -88,8 +88,9 @@ repo, so `--video=` was not run.
 
 ## Independent review
 
-Two rounds of automated review ran while building (each lens's findings were
-re-checked by an adversarial verifier against the current code):
+Three rounds of automated review ran while building. Each lens's findings
+were re-checked by an adversarial verifier against the current code, and each
+round reviewed the fixes from the one before:
 
 - **Round 1** (engine, spec compliance, renderer runtime, Electron
   security/privacy): 14 defects, all fixed (DECISIONS.md D-033 to D-035).
@@ -97,11 +98,15 @@ re-checked by an adversarial verifier against the current code):
   on every question, and "Skip to answering" closed the answer it was meant
   to start.
 - **Round 2** (doc accuracy, late-code bug hunt, product flow + contest
-  rules): 25 findings; all fixed (D-037, D-038). Most important: listening
+  rules): 25 findings, all fixed (D-037, D-038). Most important: listening
   could still close answers mid-sentence under 1 s packet batching; real
-  recordings would not have replayed exactly; and simulated or replayed
-  numbers could leave the app (PNG card, saved debrief) without a
-  "simulated" label.
+  recordings would not have replayed exactly; simulated or replayed numbers
+  could leave the app (PNG card, saved debrief) without a "simulated" label.
+- **Round 3** (regression review of all fixes + a fresh first-time-user
+  walkthrough): 5 findings, all fixed (D-039): PNG stamp overlap, default-band
+  wording in the live Gate status, replay origin lost on re-record, a
+  misleading pulse reason when the talking baseline had no clean pulse, and
+  undocumented timing for when "Take your time." can fire.
 
 ## First commands in the morning
 
