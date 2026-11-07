@@ -192,7 +192,8 @@ export class SessionController {
         this.queueHud({ ...(this.hudPending ?? this.hud.get()), status: st });
       }),
       source.onError((err) => {
-        this.patch({ sourceError: err.message });
+        if (err.fatal) void this.abortWithError(err.message);
+        else this.patch({ sourceError: err.message });
       }),
     );
     if (source.onPreviewStream)
@@ -371,6 +372,12 @@ export class SessionController {
 
   endSessionEarly(): void {
     if (this.engine && this.source) this.engine.endSession(this.source.now());
+  }
+
+  /** A fatal source error: release the camera and return to the start screen with an explanation. */
+  private async abortWithError(message: string): Promise<void> {
+    await this.leaveSession();
+    this.patch({ startError: message });
   }
 
   /** Back to the consent screen; releases everything. */

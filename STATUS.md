@@ -24,3 +24,19 @@ with exactly what was verified, what was not, and the first commands to run.
   `ManualSignalSource` (camera-free mode).
 - Tests: determinism, breath period 3-6 s across 8 seeds, pulse range and
   talking dips, dropouts never carry numbers, record → replay round trip.
+
+## Milestones 3-6 — engine, Gate, UI, real SDK wiring
+
+- Engine state machine, baselines, cues, Gate, debrief metrics, session JSON;
+  280 tests green, including a replay fixture that reproduces its debrief
+  exactly.
+- `node scripts/smoke-sim.mjs --full --speed=8` drives consent → debrief in
+  Electron under Xvfb with no console errors (screens: signal check, seated
+  and talking baselines, interview, Gate, debrief).
+- Real mode with Chromium's fake camera: SDK loads in main, camera opens,
+  frames reach the SDK; the SDK then reports `kNetworkError` because this
+  container cannot reach `cont-api.physiology.presagetech.com`. The app
+  returns to the start screen with a plain-language error.
+- `npx electron-forge package` (Linux x64) succeeds; the packaged app contains
+  the SDK JS closure in app.asar (koffi unpacked) and the native runtime as an
+  extra resource, and boots in real mode pointing `SMARTSPECTRA_CAPI_PATH` at it.

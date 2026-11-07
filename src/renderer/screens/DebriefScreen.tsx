@@ -163,9 +163,7 @@ export function DebriefView({ record, live }: { record: SessionRecord; live: boo
         {settled.length} of {total} Gates settled
         {settled.length > 0
           ? ` · median recovery ${fmtSeconds(
-              settled.map((q) => q.recoveryTimeMs ?? 0).sort((a, b) => a - b)[
-                Math.floor(settled.length / 2)
-              ],
+              settled.map((q) => q.recoveryTimeMs ?? 0).sort((a, b) => a - b)[Math.floor(settled.length / 2)],
             )}`
           : ''}
       </h1>

@@ -46,4 +46,9 @@ function cspPlugin(): Plugin {
 // https://vitejs.dev/config
 export default defineConfig({
   plugins: [react(), cspPlugin()],
+  optimizeDeps: {
+    // Pre-bundle the SDK's renderer entry points. Otherwise Vite discovers them
+    // only when real mode dynamically imports them and reloads the page mid-start.
+    include: ['@smartspectra/node-sdk/renderer', '@smartspectra/node-sdk/messages'],
+  },
 });

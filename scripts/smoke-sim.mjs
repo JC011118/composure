@@ -10,6 +10,8 @@
  *   node scripts/smoke-sim.mjs                       # boot check only
  *   node scripts/smoke-sim.mjs --full --speed=8      # drive consent → debrief
  *   node scripts/smoke-sim.mjs --shots=out/shots     # screenshot directory
+ *   node scripts/smoke-sim.mjs --real --observe=40    # REAL mode with Chromium's fake camera:
+ *                                                     # checks the SDK wiring end to end (needs PRESAGE_API_KEY)
  *
  * Requires Playwright (`npm i -D playwright` or a global install); it is only
  * used to attach to the already-running Electron window over CDP.
@@ -32,7 +34,9 @@ const SPEED = Number(flag('speed', FULL ? 8 : 1));
 const SHOTS = String(flag('shots', 'out/smoke'));
 const PORT = Number(flag('port', 9333));
 const SCENARIO = String(flag('scenario', 'demo'));
-const TIMEOUT_MS = Number(flag('timeout', FULL ? 420_000 : 90_000));
+const REAL = Boolean(flag('real', false));
+const OBSERVE_S = Number(flag('observe', 40));
+const TIMEOUT_MS = Number(flag('timeout', FULL ? 420_000 : REAL ? OBSERVE_S * 1000 + 90_000 : 90_000));
 
 let chromium;
 try {
@@ -46,12 +50,18 @@ try {
 
 mkdirSync(SHOTS, { recursive: true });
 
-const appArgs = [
-  '--sim',
-  `--sim-speed=${SPEED}`,
-  `--sim-scenario=${SCENARIO}`,
-  `--remote-debugging-port=${PORT}`,
-];
+const appArgs = REAL
+  ? [
+      // Chromium's synthetic camera (a moving test pattern, no face) and auto-accepted capture UI.
+      '--use-fake-device-for-media-stream',
+      '--use-fake-ui-for-media-stream',
+      `--remote-debugging-port=${PORT}`,
+    ]
+  : ['--sim', `--sim-speed=${SPEED}`, `--sim-scenario=${SCENARIO}`, `--remote-debugging-port=${PORT}`];
+if (REAL && !process.env.PRESAGE_API_KEY && !process.env.SMARTSPECTRA_API_KEY) {
+  console.error('smoke-sim --real needs PRESAGE_API_KEY in the environment.');
+  process.exit(2);
+}
 if (process.platform === 'linux' && typeof process.getuid === 'function' && process.getuid() === 0) {
   appArgs.push('--no-sandbox');
 }
@@ -119,6 +129,8 @@ async function main() {
 
   if (FULL) {
     await driveFullSession(page);
+  } else if (REAL) {
+    await observeReal(page);
   }
 
   const fatal = errors.filter((e) => !/Autofill|DevTools|Electron Security Warning/.test(e));
@@ -129,6 +141,31 @@ async function main() {
     console.log('smoke-sim: OK (no console errors)');
   }
   await browser.close().catch(() => {});
+}
+
+async function observeReal(page) {
+  await page.check('[data-testid="consent-optin"]');
+  await page.click('[data-testid="consent-begin"]');
+  const t0 = Date.now();
+  let shot = 2;
+  while (Date.now() - t0 < OBSERVE_S * 1000) {
+    await sleep(5_000);
+    const screen = await page.getAttribute('[data-screen]', 'data-screen').catch(() => null);
+    const hud = (await page.textContent('[data-testid="hud"]').catch(() => '')) ?? '';
+    const banners = await page
+      .$$eval('.banner', (els) => els.map((e) => e.textContent?.trim() ?? ''))
+      .catch(() => []);
+    console.log(
+      `smoke-real: t=${Math.round((Date.now() - t0) / 1000)}s screen=${screen} hud="${hud.replace(/\s+/g, ' ').trim()}"`,
+    );
+    for (const b of banners) console.log(`smoke-real:   banner: ${b}`);
+    await page.screenshot({ path: path.join(SHOTS, `${String(shot++).padStart(2, '0')}-real.png`) });
+  }
+  const tail = appLog
+    .split('\n')
+    .filter((l) => /smartspectra|composure|SmartSpectra/i.test(l))
+    .slice(-25);
+  console.log('smoke-real: app log (SDK lines):\n  ' + tail.join('\n  '));
 }
 
 async function driveFullSession(page) {

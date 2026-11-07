@@ -270,3 +270,43 @@ Rendered on an offscreen 1200×630 canvas (share-card size) from the saved
 series: headline, question text, the Gate-period breathing trace, talk time and
 pauses, and the pulse delta only when it was shown in the debrief. No camera
 imagery. Saved through a native save dialog.
+
+## D-025 Metric packets → samples (PresageSignalSource)
+
+`breathing.upperTrace[]` entries become samples (densest series). Slow
+readings (`breathing.rate`, `cardio.pulseRate`, `cardio.hrv`) are attached to
+each sample only while ≤ 2.5 s old, and only when the latest validationStatus
+is OK — never carried across a gap. `face.talking`/`face.blinking` entries are
+time-aligned to each trace sample. Sample time = SDK epoch-µs timestamp / 1000
+minus the source's start time (`Date.now()`), so `source.now()` and sample
+times share one clock. The decoding logic lives in `presageNormalize.ts` (no SDK
+import, unit-tested); `PresageSignalSource.ts` stays the only renderer file
+importing `@smartspectra/*`. Identical consecutive validation statuses are
+debounced (SDK guidance).
+
+## D-026 SDK errors
+
+Auth, configuration, credit, and camera errors end the session; network,
+server, and processing errors also end it if they arrive before the first
+metrics packet (the SDK never got going). Ending releases the camera and
+returns to the start screen with a plain-language explanation and the SDK
+error code. Later non-fatal errors show as a banner while the session
+continues (gaps appear in the data).
+
+## D-027 Vite pre-bundles the SDK renderer entry points
+
+Real mode loads `PresageSignalSource` with a dynamic import (so other modes
+never load SDK code). In dev, Vite discovered the SDK's CommonJS renderer
+modules only at that moment and force-reloaded the page mid-start, silently
+dropping back to the consent screen. `optimizeDeps.include` lists
+`@smartspectra/node-sdk/renderer` and `/messages` so they are pre-bundled.
+
+## D-028 Real-mode check in this build environment
+
+With Chromium's fake camera (`--use-fake-device-for-media-stream`), real mode
+was exercised end to end in the Linux build container: the main-process SDK
+loaded, the camera opened, frames flowed over the SDK's MessagePort, and the
+SDK reported `kNetworkError` because this environment's network policy blocks
+`cont-api.physiology.presagetech.com` (the SDK's authentication host). So the
+wiring is verified; actual metrics need the morning run on a Mac with normal
+internet. `node scripts/smoke-sim.mjs --real` repeats this check.

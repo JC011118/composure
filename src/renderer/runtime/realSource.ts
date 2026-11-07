@@ -10,6 +10,7 @@ export interface RealSourceOptions {
   telemetry: boolean;
 }
 
-export async function loadRealSource(_opts: RealSourceOptions): Promise<SignalSource> {
-  throw new Error('Real SDK mode is not wired in this build yet. Run with --sim.');
+export async function loadRealSource(opts: RealSourceOptions): Promise<SignalSource> {
+  const { PresageSignalSource } = await import('../../signals/PresageSignalSource');
+  return new PresageSignalSource({ apiKey: opts.apiKey, telemetry: opts.telemetry });
 }
