@@ -11,6 +11,33 @@ import type { SignalSource, Unsubscribe } from './SignalSource';
 export const RECORDING_FORMAT = 'composure-signal-recording';
 export const RECORDING_VERSION = 1;
 
+/** A user/app action that changes the engine's course, recorded so a replay can reproduce it. */
+export type SessionAction =
+  | 'begin'
+  | 'speechEnded'
+  | 'manualEndAnswer'
+  | 'continueAfterGate'
+  | 'skipGate'
+  | 'endSession';
+
+export interface RecordedAction {
+  action: SessionAction;
+  /** Source time of the action. */
+  tMs: number;
+  /** Number of samples the engine had received when the action happened. */
+  afterSamples: number;
+  /** Speech id for speechEnded. */
+  speechId?: number;
+}
+
+/** Enough of the live session to replay it exactly: questions, config, and actions. */
+export interface RecordedSession {
+  questionIds: string[];
+  /** EngineConfig snapshot the live session used. */
+  config: unknown;
+  actions: RecordedAction[];
+}
+
 export interface SignalRecording {
   format: typeof RECORDING_FORMAT;
   version: typeof RECORDING_VERSION;
@@ -22,6 +49,8 @@ export interface SignalRecording {
   statuses: SignalStatus[];
   /** Free-form notes (scenario, seed, hardware). */
   notes?: string;
+  /** Present when the recording was made during a session (enables exact replay). */
+  session?: RecordedSession;
 }
 
 const r = (x: number, digits: number): number => {
@@ -62,6 +91,7 @@ export class RecordingTap {
   private statuses: SignalStatus[] = [];
   private unsubs: Unsubscribe[];
   private stopped = false;
+  private session: RecordedSession | null = null;
 
   constructor(
     private readonly source: SignalSource,
@@ -79,6 +109,22 @@ export class RecordingTap {
 
   get sampleCount(): number {
     return this.samples.length;
+  }
+
+  /** Describe the session being recorded (call once, before or at begin). */
+  setSession(questionIds: string[], config: unknown): void {
+    this.session = { questionIds: [...questionIds], config, actions: [] };
+  }
+
+  /** Record an action that changes the engine's course. */
+  mark(action: SessionAction, tMs: number, speechId?: number): void {
+    if (this.stopped || !this.session) return;
+    this.session.actions.push({
+      action,
+      tMs: r(tMs, 3),
+      afterSamples: this.samples.length,
+      ...(speechId !== undefined ? { speechId } : {}),
+    });
   }
 
   stop(): void {
@@ -99,6 +145,7 @@ export class RecordingTap {
       samples: [...this.samples],
       statuses: [...this.statuses],
       ...(notes ? { notes } : {}),
+      ...(this.session ? { session: { ...this.session, actions: [...this.session.actions] } } : {}),
     };
   }
 
@@ -142,5 +189,19 @@ export function parseRecording(json: string): SignalRecording {
     samples: rec.samples,
     statuses: Array.isArray(rec.statuses) ? rec.statuses : [],
     ...(typeof rec.notes === 'string' ? { notes: rec.notes } : {}),
+    ...(isRecordedSession(rec.session) ? { session: rec.session } : {}),
   };
+}
+
+function isRecordedSession(x: unknown): x is RecordedSession {
+  const s = x as RecordedSession | undefined;
+  return (
+    !!s &&
+    Array.isArray(s.questionIds) &&
+    s.questionIds.every((q) => typeof q === 'string') &&
+    Array.isArray(s.actions) &&
+    s.actions.every(
+      (a) => typeof a?.action === 'string' && typeof a.tMs === 'number' && typeof a.afterSamples === 'number',
+    )
+  );
 }

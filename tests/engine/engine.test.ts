@@ -215,6 +215,40 @@ describe('InterviewEngine state machine', () => {
     expect(r.gate.endMs - r.gate.startMs).toBeLessThan(45_100);
   });
 
+  it('judges end-of-answer on sample time when packets arrive late', () => {
+    // Samples reach the engine 800 ms after the moment they describe (SDK latency),
+    // while the app ticks on the wall clock. A 3.6 s mid-answer pause must not close the answer.
+    const lat = 800;
+    const run = new ScriptedRun(
+      {
+        talking: (_t: number, c: Ctx) =>
+          c.phase === 'baselineTalking' ||
+          (c.phase === 'listening' &&
+            ((c.since >= 1_000 && c.since < 12_000) || (c.since >= 15_600 && c.since < 20_000))),
+      },
+      { questions: 1 },
+    );
+    run.engine.begin(0);
+    run.runUntil(() => run.phase === 'listening', 200_000);
+    const listenStart = run.phaseStart;
+    // From here, deliver samples late and tick ahead of them.
+    const step = 1000 / 30;
+    let sampleT = run.t;
+    for (let clock = run.t; clock < listenStart + 40_000; clock += step) {
+      run.engine.tick(clock);
+      while (sampleT <= clock - lat) {
+        run.engine.ingest(run.sampleAt(Math.round(sampleT * 1000) / 1000));
+        sampleT += step;
+      }
+    }
+    const [r] = run.engine.snapshotNow().results.length ? run.engine.snapshotNow().results : [null];
+    const ended = run.last('answerEnded');
+    expect(ended).toBeDefined();
+    // Ends ~4 s after the second stretch of talking (20 s), not during the 3.6 s pause.
+    expect((ended as { tMs: number }).tMs - listenStart).toBeGreaterThan(23_500);
+    if (r) expect(r.pauseCount).toBe(1);
+  });
+
   it('renders unusable signal spans as gaps (null), never numbers', () => {
     const run = new ScriptedRun(
       { talking: normalTalk, ok: (_t, c) => !listening(c, 15_000, 17_000) },

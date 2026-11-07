@@ -84,6 +84,34 @@ export class ReplaySignalSource implements SignalSource {
     }
   }
 
+  /** Time offset subtracted from recorded times (the first sample's time). */
+  get timeBaseMs(): number {
+    return this.t0;
+  }
+
+  get emittedCount(): number {
+    return this.sampleIdx;
+  }
+
+  get sampleCount(): number {
+    return this.recording.samples.length;
+  }
+
+  /** Emit exactly the next sample (with any statuses due before it). Returns false at the end. */
+  stepOne(): boolean {
+    const { samples, statuses } = this.recording;
+    if (this.sampleIdx >= samples.length) return false;
+    const s = samples[this.sampleIdx++];
+    const rt = s.tMs - this.t0;
+    while (this.statusIdx < statuses.length && statuses[this.statusIdx].tMs - this.t0 <= rt) {
+      const st = statuses[this.statusIdx++];
+      this.statuses.emit({ ...st, tMs: st.tMs - this.t0 });
+    }
+    this.samples.emit({ ...s, tMs: rt });
+    this.simNow = Math.max(this.simNow, rt);
+    return true;
+  }
+
   onEnded(listener: () => void): Unsubscribe {
     return this.ended.on(listener);
   }

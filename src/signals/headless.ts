@@ -6,6 +6,8 @@
 
 import type { InterviewEngine } from '../engine/engine';
 import type { EngineEvent } from '../engine/types';
+import type { SessionAction } from './recording';
+import type { ReplaySignalSource } from './ReplaySignalSource';
 import type { SignalSource } from './SignalSource';
 
 export interface SteppableSource extends SignalSource {
@@ -25,6 +27,8 @@ export interface HeadlessOptions {
   autoContinue?: boolean;
   /** When to give consent. */
   beginAtMs?: number;
+  /** Called for every action applied to the engine (feed a RecordingTap's mark()). */
+  onAction?: (action: SessionAction, tMs: number, speechId?: number) => void;
 }
 
 export interface HeadlessRun {
@@ -60,6 +64,7 @@ export function runHeadless(opts: HeadlessOptions): HeadlessRun {
   try {
     while (t <= maxMs) {
       if (!begun && t >= beginAt) {
+        opts.onAction?.('begin', t);
         engine.begin(t);
         begun = true;
       }
@@ -68,10 +73,14 @@ export function runHeadless(opts: HeadlessOptions): HeadlessRun {
       for (let i = pendingSpeech.length - 1; i >= 0; i--) {
         if (pendingSpeech[i].at <= t) {
           const [{ id }] = pendingSpeech.splice(i, 1);
+          opts.onAction?.('speechEnded', t, id);
           engine.speechEnded(id, t);
         }
       }
-      if (opts.autoContinue) engine.continueAfterGate(t);
+      if (opts.autoContinue && engine.snapshotNow().gate?.result) {
+        opts.onAction?.('continueAfterGate', t);
+        engine.continueAfterGate(t);
+      }
       if (engine.currentPhase === 'debrief') break;
       t += stepMs;
     }
@@ -81,4 +90,69 @@ export function runHeadless(opts: HeadlessOptions): HeadlessRun {
     offStatus();
   }
   return { events, endMs: t, reachedDebrief: engine.currentPhase === 'debrief' };
+}
+
+export interface ReplayRunOptions {
+  engine: InterviewEngine;
+  source: ReplaySignalSource;
+  actions: { action: SessionAction; tMs: number; afterSamples: number; speechId?: number }[];
+  /** How long to keep the clock running after the last sample (lets a final Gate time out). */
+  tailMs?: number;
+}
+
+/**
+ * Exact replay of a recorded session: samples are fed one at a time and each
+ * recorded action is applied after the same number of samples it followed
+ * live, at its recorded time (re-based like the samples).
+ */
+export function runReplay(opts: ReplayRunOptions): HeadlessRun {
+  const { engine, source } = opts;
+  const events: EngineEvent[] = [];
+  const base = source.timeBaseMs;
+  const actions = [...opts.actions].sort((a, b) => a.afterSamples - b.afterSamples);
+  const offEngine = engine.on((e) => events.push(e));
+  const offSample = source.onSample((s) => engine.ingest(s));
+  const offStatus = source.onStatus((s) => engine.ingestStatus(s));
+  let ai = 0;
+  let lastT = 0;
+  const apply = (a: (typeof actions)[number]) => {
+    const t = a.tMs - base;
+    lastT = Math.max(lastT, t);
+    switch (a.action) {
+      case 'begin':
+        engine.begin(t);
+        break;
+      case 'speechEnded':
+        if (a.speechId !== undefined) engine.speechEnded(a.speechId, t);
+        break;
+      case 'manualEndAnswer':
+        engine.manualEndAnswer(t);
+        break;
+      case 'continueAfterGate':
+        engine.continueAfterGate(t);
+        break;
+      case 'skipGate':
+        engine.skipGate(t);
+        break;
+      case 'endSession':
+        engine.endSession(t);
+        break;
+    }
+  };
+  try {
+    for (;;) {
+      while (ai < actions.length && actions[ai].afterSamples <= source.emittedCount) apply(actions[ai++]);
+      if (!source.stepOne()) break;
+      lastT = Math.max(lastT, source.now());
+      engine.tick(source.now());
+    }
+    while (ai < actions.length) apply(actions[ai++]);
+    const tail = opts.tailMs ?? 120_000;
+    for (let t = lastT; t <= lastT + tail && engine.currentPhase !== 'debrief'; t += 100) engine.tick(t);
+  } finally {
+    offEngine();
+    offSample();
+    offStatus();
+  }
+  return { events, endMs: engine.now, reachedDebrief: engine.currentPhase === 'debrief' };
 }

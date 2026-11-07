@@ -22,7 +22,7 @@
       "timeToFirstWordMs": 2265,
       "talkTimeMs": 24700,
       "pauseCount": 2,
-      "recoveryTimeMs": 16965,
+      "recoveryTimeMs": 15800,
       "pulseShown": true,
       "breathingShown": true
     },
@@ -34,7 +34,7 @@
       "timeToFirstWordMs": 2198,
       "talkTimeMs": 23633,
       "pauseCount": 2,
-      "recoveryTimeMs": 9797,
+      "recoveryTimeMs": 10133,
       "pulseShown": false,
       "breathingShown": true
     }

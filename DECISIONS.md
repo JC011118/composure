@@ -310,3 +310,39 @@ SDK reported `kNetworkError` because this environment's network policy blocks
 `cont-api.physiology.presagetech.com` (the SDK's authentication host). So the
 wiring is verified; actual metrics need the morning run on a Mac with normal
 internet. `node scripts/smoke-sim.mjs --real` repeats this check.
+
+## D-029 Listening decisions use sample time (SDK latency)
+
+Real SDK metric packets describe moments ~0.5-1 s in the past, while the app
+ticks the engine on the wall clock. Measuring silence against the clock made
+end-of-answer (and cue A) fire up to a second early — possibly while the packet
+showing the user had resumed talking was still in flight. Listening now
+evaluates on the latest sample time while samples flow, falling back to the
+clock only after 1.5 s without samples (so a stalled SDK can still end an
+answer). Covered by a latency test in `tests/engine/engine.test.ts`.
+
+## D-030 Cue A's trace rate counts only breaths inside the silence
+
+The trace-derived rate over a silent span uses only half-cycle estimates whose
+whole period lies inside the span. Including the first breath after speech
+(whose period started during speech breathing, often 5-6 s) dragged the rate
+down and suppressed the cue. As a result cue A typically confirms ~1-3 s after
+the 6 s silence threshold, once two full breaths have been measured.
+
+## D-031 Recordings carry session timing for exact replay
+
+With `--record`, the recording stores the question IDs, the engine config, and
+every action that changes the engine's course (begin, speech completions,
+Done / Skip / Continue / End) with the number of samples received before it.
+`runReplay` feeds samples one by one and applies each action at the same point,
+so a real session replays to the same debrief — and can be re-run with
+different constants (`scripts/replay-check.ts --config=…`) to tune the Gate
+without sitting through ten more Gates. Statuses are interleaved by time
+(they affect only the HUD/snapshot, not decisions).
+
+## D-032 Gate diagnostics
+
+Each Gate result records how many milliseconds each criterion (gap, no-cycle,
+period, amplitude, held, excursion, no-data) kept it closed. Saved sessions
+carry it; `scripts/session-report.mjs` and `scripts/replay-check.ts` print it
+and map the dominant reason to the constant to loosen (MORNING_CHECKLIST.md).

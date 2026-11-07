@@ -92,10 +92,10 @@ export function ConsentScreen() {
           <div className="toggle">
             <div style={{ flex: 1 }}>
               <div className="label">Questions</div>
-              <div className="desc">Mixed behavioral and technical.</div>
+              <div className="desc">Mixed behavioral and technical. Pick 10 for the Gate drill.</div>
             </div>
             <div className="segmented" role="group" aria-label="Question count">
-              {[2, 3, 4, 5, 6].map((n) => (
+              {[2, 3, 4, 5, 6, 10].map((n) => (
                 <button
                   key={n}
                   type="button"

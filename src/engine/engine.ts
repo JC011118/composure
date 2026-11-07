@@ -118,6 +118,13 @@ interface QuestionState {
 }
 
 const SNAPSHOT_INTERVAL_MS = 100;
+/**
+ * Real SDK packets arrive a little after the moment they describe, while the
+ * app ticks on the wall clock. Listening decisions (end of answer, cues) use
+ * sample time while samples are flowing and fall back to the clock only when
+ * samples have stalled for this long.
+ */
+const SAMPLE_STALL_MS = 1_500;
 
 export class InterviewEngine {
   readonly config: EngineConfig;
@@ -457,9 +464,11 @@ export class InterviewEngine {
         else this.finishTalking(now);
         break;
       }
-      case 'listening':
-        this.updateListening(now);
+      case 'listening': {
+        const stalled = now - this.lastSampleMs > SAMPLE_STALL_MS;
+        this.updateListening(stalled ? now : Math.max(this.lastSampleMs, this.phaseStartMs));
         break;
+      }
       case 'gate':
         this.updateGate(now);
         break;
@@ -566,7 +575,8 @@ export class InterviewEngine {
         (s) => (s.sdkConfidenceOk ? s.breathingRate : undefined),
         this.config.debrief.maxSampleGapMs,
       );
-      const inSpan = this.recentEstimates.filter((e) => e.pointMs >= from && e.pointMs <= t);
+      // Only breaths that lie entirely inside the silence (not ones that began during speech).
+      const inSpan = this.recentEstimates.filter((e) => e.pointMs - e.periodMs >= from && e.pointMs <= t);
       const traceRate = inSpan.length >= 2 ? 60_000 / (mean(inSpan.map((e) => e.periodMs)) as number) : null;
       const decision = decideCueA(
         {

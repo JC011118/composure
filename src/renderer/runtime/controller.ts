@@ -210,7 +210,13 @@ export class SessionController {
 
     this.hud.set({ ...IDLE_HUD, mode: opts.cameraFree ? 'camera-free' : source.kind });
     this.engineStore.set(engine);
-    engine.begin(source.now());
+    this.tap?.setSession(
+      questions.map((q) => q.id),
+      this.config,
+    );
+    const beginAt = source.now();
+    this.tap?.mark('begin', beginAt);
+    engine.begin(beginAt);
     this.tickTimer = setInterval(() => {
       if (this.source) engine.tick(this.source.now());
     }, 100);
@@ -251,7 +257,10 @@ export class SessionController {
     if (e.type === 'speak' && engine) {
       const id = e.id;
       this.voice.speak(e.text, () => {
-        if (this.source) engine.speechEnded(id, this.source.now());
+        if (!this.source) return;
+        const t = this.source.now();
+        this.tap?.mark('speechEnded', t, id);
+        engine.speechEnded(id, t);
       });
     }
     if (e.type === 'debriefReady') void this.onDebrief();
@@ -358,20 +367,33 @@ export class SessionController {
     }
   }
 
+  /** Apply a user action to the engine, recording it for exact replay when --record is on. */
+  private act(action: 'manualEndAnswer' | 'continueAfterGate' | 'skipGate' | 'endSession'): void {
+    const engine = this.engine;
+    const source = this.source;
+    if (!engine || !source) return;
+    const t = source.now();
+    this.tap?.mark(action, t);
+    if (action === 'manualEndAnswer') engine.manualEndAnswer(t);
+    else if (action === 'continueAfterGate') engine.continueAfterGate(t);
+    else if (action === 'skipGate') engine.skipGate(t);
+    else engine.endSession(t);
+  }
+
   manualEndAnswer(): void {
-    if (this.engine && this.source) this.engine.manualEndAnswer(this.source.now());
+    this.act('manualEndAnswer');
   }
 
   continueAfterGate(): void {
-    if (this.engine && this.source) this.engine.continueAfterGate(this.source.now());
+    this.act('continueAfterGate');
   }
 
   skipGate(): void {
-    if (this.engine && this.source) this.engine.skipGate(this.source.now());
+    this.act('skipGate');
   }
 
   endSessionEarly(): void {
-    if (this.engine && this.source) this.engine.endSession(this.source.now());
+    this.act('endSession');
   }
 
   /** A fatal source error: release the camera and return to the start screen with an explanation. */

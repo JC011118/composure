@@ -78,6 +78,8 @@ export interface GateResult {
   recoveryTimeMs: number | null;
   /** Fraction of the Gate spent inside the band (diagnostic). */
   inBandFraction: number;
+  /** Milliseconds the Gate was held closed by each criterion (diagnostic, for tuning). */
+  outReasonMs?: Partial<Record<OutReason, number>>;
 }
 
 export function computeBand(breath: BreathStats | null, gate: GateConfig, baseline: BaselineConfig): Band {
@@ -122,6 +124,7 @@ export class GateDetector {
   private lastT: number;
   private lastSampleT: number | null = null;
   private inBandMs = 0;
+  private readonly outMs: Partial<Record<OutReason, number>> = {};
   private _status: GateStatus;
   private _result: GateResult | null = null;
 
@@ -200,6 +203,7 @@ export class GateDetector {
       if (this.streakStart === null) this.streakStart = t;
     } else {
       this.streakStart = null;
+      if (reason) this.outMs[reason] = (this.outMs[reason] ?? 0) + dt;
     }
     this.lastT = t;
     const streakMs = this.streakStart === null ? 0 : t - this.streakStart;
@@ -222,6 +226,9 @@ export class GateDetector {
       timedOut: outcome === 'timed out',
       recoveryTimeMs,
       inBandFraction: Math.min(1, this.inBandMs / dur),
+      outReasonMs: Object.fromEntries(
+        Object.entries(this.outMs).map(([k, v]) => [k, Math.round(v as number)]),
+      ) as Partial<Record<OutReason, number>>,
     };
     this._status = this.makeStatus(t, this._status?.inBand ?? false, this._status?.outReason ?? null);
     return this._result;

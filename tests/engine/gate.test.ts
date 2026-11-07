@@ -89,6 +89,11 @@ describe('GateDetector', () => {
     expect(r.endMs - START).toBeGreaterThanOrEqual(45_000);
     expect(r.endMs - START).toBeLessThan(45_100);
     expect(r.inBandFraction).toBeLessThan(0.05);
+    // Diagnostics: the Gate was held closed mostly by breath depth.
+    const reasons = r.outReasonMs ?? {};
+    const top = Object.entries(reasons).sort((a, b) => (b[1] as number) - (a[1] as number))[0];
+    expect(top[0]).toBe('amplitude');
+    expect(top[1] as number).toBeGreaterThan(30_000);
   });
 
   it('fast elevated breathing that settles unlocks once it is back in band', () => {

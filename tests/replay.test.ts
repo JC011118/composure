@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { InterviewEngine } from '../src/engine/engine';
 import { selectQuestions } from '../src/engine/questions';
@@ -7,9 +7,9 @@ import { findBannedTerms } from '../src/engine/lexicon';
 import { parseSession, serializeSession } from '../src/engine/session';
 import { QUESTION_BANK } from '../src/content';
 import { SimulatedSignalSource } from '../src/signals/SimulatedSignalSource';
-import { ReplaySignalSource } from '../src/signals/ReplaySignalSource';
 import { parseRecording } from '../src/signals/recording';
 import { runHeadless } from '../src/signals/headless';
+import { replaySession } from '../src/signals/replaySession';
 import { summarize } from '../src/signals/summary';
 
 const META = { id: 'e2e', createdAt: '2026-11-07T00:00:00.000Z', appVersion: 'test' };
@@ -48,15 +48,21 @@ describe('end-to-end simulated session', () => {
     expect(json).not.toMatch(/data:image|base64|"frame|video/i);
   });
 
-  it('replaying the committed fixture reproduces the recorded debrief exactly', () => {
-    const dir = path.resolve(__dirname, '..', 'fixtures', 'replays');
-    const recording = parseRecording(readFileSync(path.join(dir, 'sim-demo-seed7.recording.json'), 'utf8'));
-    const expected = JSON.parse(readFileSync(path.join(dir, 'sim-demo-seed7.expected.json'), 'utf8'));
-    const questions = selectQuestions(QUESTION_BANK, 3, 7);
-    const engine = new InterviewEngine({ questions, mode: 'replay' });
-    const source = new ReplaySignalSource(recording);
-    const run = runHeadless({ engine, source });
+  const dir = path.resolve(__dirname, '..', 'fixtures', 'replays');
+  const fixtures = readdirSync(dir)
+    .filter((f) => f.endsWith('.recording.json'))
+    .map((f) => f.slice(0, -'.recording.json'.length))
+    .filter((name) => existsSync(path.join(dir, `${name}.expected.json`)));
+
+  it('has at least one replay fixture', () => {
+    expect(fixtures.length).toBeGreaterThan(0);
+  });
+
+  it.each(fixtures)('replaying fixture %s reproduces its debrief exactly', (name) => {
+    const recording = parseRecording(readFileSync(path.join(dir, `${name}.recording.json`), 'utf8'));
+    const expected = JSON.parse(readFileSync(path.join(dir, `${name}.expected.json`), 'utf8'));
+    const { run, record } = replaySession(recording, QUESTION_BANK);
     expect(run.reachedDebrief).toBe(true);
-    expect(summarize(engine.buildRecord(META))).toEqual(expected);
+    expect(summarize(record)).toEqual(expected);
   });
 });
