@@ -125,6 +125,8 @@ const SNAPSHOT_INTERVAL_MS = 100;
  * samples have stalled for this long.
  */
 const SAMPLE_STALL_MS = 1_500;
+/** A pulse delta needs at least this much answer to average over. */
+const MIN_PULSE_SPAN_MS = 2_000;
 
 export class InterviewEngine {
   readonly config: EngineConfig;
@@ -300,7 +302,16 @@ export class InterviewEngine {
 
   /** Advance time without a sample (keeps timers running if the signal stalls). */
   tick(tMs: number): void {
-    if (this.phase === 'gate' && this.q?.gate && !this.q.gateResult) this.q.gate.tick(tMs);
+    // The Gate only hears about clock time when samples have actually stalled;
+    // normal SDK latency must not reset its streak.
+    if (
+      this.phase === 'gate' &&
+      this.q?.gate &&
+      !this.q.gateResult &&
+      tMs - Math.max(this.lastSampleMs, this.q.gateStartMs ?? tMs) > this.config.gate.stallMs
+    ) {
+      this.q.gate.tick(tMs);
+    }
     this.advance(tMs);
   }
 
@@ -318,11 +329,10 @@ export class InterviewEngine {
   manualEndAnswer(tMs: number): void {
     this.nowMs = Math.max(this.nowMs, tMs);
     if (this.phase === 'asking' && this.q) {
-      // Skip the rest of the question audio.
+      // During the question this only skips the rest of the question audio.
       this.speaking = null;
       this.enterListening(this.nowMs);
-    }
-    if (this.phase === 'listening' && this.q?.tracker) {
+    } else if (this.phase === 'listening' && this.q?.tracker) {
       const end = this.q.tracker.end(this.nowMs, 'manual');
       this.enterGate(end.tMs, end.reason);
     }
@@ -528,7 +538,12 @@ export class InterviewEngine {
   private enterListening(t: number): void {
     if (!this.q || this.phase !== 'asking') return;
     this.q.listenStartMs = t;
-    this.q.tracker = new AnswerTracker(this.config.listening, t, this.debouncer.talking);
+    // Only an utterance still in progress counts as the answer having started.
+    this.q.tracker = new AnswerTracker(
+      this.config.listening,
+      t,
+      this.debouncer.talking && this.debouncer.rawTalking,
+    );
     this.setPhase('listening', t, this.q.index);
     if (this.q.tracker.answerStarted) {
       this.emit({ type: 'answerStarted', questionIndex: this.q.index, tMs: t });
@@ -619,10 +634,21 @@ export class InterviewEngine {
     return { mean: m, sd: (m * b.periodSdMs) / b.periodMeanMs, n: b.nEstimates };
   }
 
+  private estimateSpeechMs(text: string): number {
+    const words = text.split(/\s+/).filter(Boolean).length;
+    return Math.max(this.config.asking.minMs, words * this.config.asking.msPerWord);
+  }
+
   private fireCue(event: CueEvent, text: string): void {
     const q = this.q;
     if (!q?.tracker) return;
-    q.tracker.recordCue(event, this.config.cueA.graceMs);
+    // Silence is not counted toward ending the answer until the user has had
+    // time to respond to the cue.
+    const floor =
+      event.cue === 'A'
+        ? event.tMs + this.config.cueA.graceMs
+        : event.tMs + this.estimateSpeechMs(text) + this.config.cueB.graceMs;
+    q.tracker.recordCue(event, floor);
     this.emit({ type: 'cue', questionIndex: q.index, event });
     this.speak(text, event.cue === 'A' ? 'cueA' : 'cueB', event.tMs);
     this.notify(true);
@@ -710,8 +736,10 @@ export class InterviewEngine {
       pulse = { deltaBpm: null, meanBpm: null, coverage: 0, shown: false, reason: 'camera off' };
     } else if (answerStart === null) {
       pulse = { deltaBpm: null, meanBpm: null, coverage: 0, shown: false, reason: 'no answer detected' };
+    } else if ((answerEnd ?? listenEnd) - answerStart < MIN_PULSE_SPAN_MS) {
+      pulse = { deltaBpm: null, meanBpm: null, coverage: 0, shown: false, reason: NOT_ENOUGH_SIGNAL };
     } else {
-      const to = Math.max(answerEnd ?? listenEnd, answerStart + 1);
+      const to = answerEnd ?? listenEnd;
       const st = timeWeighted(
         q.samples,
         answerStart,

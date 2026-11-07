@@ -95,7 +95,7 @@ export function GateScreen({ engine, snap }: { engine: InterviewEngine; snap: En
       month: 'short',
       day: 'numeric',
     });
-    const png = renderRecoveredCard(qResult, snap.questionCount, date);
+    const png = renderRecoveredCard(qResult, snap.questionCount, date, engine.config.gate);
     const res = await controller.savePng(png, `composure-q${qResult.index + 1}-recovery.png`);
     setSaved(res?.ok ? `Saved to ${res.path}` : res?.cancelled ? null : 'Could not save the card');
   };

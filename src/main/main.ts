@@ -1,6 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain, session, shell } from 'electron';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import started from 'electron-squirrel-startup';
 import { apiKeyFromEnv, parseCli, type CliOptions } from './cli';
 import { SessionStore } from './sessionStore';
@@ -43,9 +44,19 @@ function bootInfo(): BootInfo {
   };
 }
 
-/** Is `url` our own bundled page (file://) or, in dev only, the Vite dev server? */
+/** The exact page we load in production. */
+const OWN_FILE_URL = pathToFileURL(
+  path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`),
+).href;
+
+/**
+ * Is `url` our own page: the bundled index.html (file://, exact path) or, in
+ * dev only, the Vite dev server origin? Any other local file or site is not.
+ */
 function isOwnPage(url: string): boolean {
-  if (url.startsWith('file://')) return true;
+  if (!url) return false;
+  const bare = url.split('#')[0].split('?')[0];
+  if (bare === OWN_FILE_URL) return true;
   if (isDev && MAIN_WINDOW_VITE_DEV_SERVER_URL) {
     try {
       return new URL(url).origin === new URL(MAIN_WINDOW_VITE_DEV_SERVER_URL).origin;
@@ -54,6 +65,12 @@ function isOwnPage(url: string): boolean {
     }
   }
   return false;
+}
+
+/** Only our own top-level page may call the privileged IPC handlers. */
+function fromOwnPage(e: Electron.IpcMainInvokeEvent): boolean {
+  const frame = e.senderFrame;
+  return !!frame && frame.parent === null && isOwnPage(frame.url);
 }
 
 function installPermissionHandlers(): void {
@@ -78,7 +95,9 @@ function registerIpc(): void {
   const store = sessionStore;
 
   ipcMain.handle(IPC.boot, () => bootInfo());
-  ipcMain.handle(IPC.getApiKey, () => (cli.mode === 'real' ? apiKeyFromEnv(process.env) : null));
+  ipcMain.handle(IPC.getApiKey, (e) =>
+    cli.mode === 'real' && fromOwnPage(e) ? apiKeyFromEnv(process.env) : null,
+  );
   ipcMain.handle(IPC.readReplay, async () => {
     if (!cli.replayFile) return null;
     try {
@@ -90,13 +109,15 @@ function registerIpc(): void {
       return null;
     }
   });
-  ipcMain.handle(IPC.sessionsList, () => store.list());
-  ipcMain.handle(IPC.sessionsSave, (_e, json: unknown) =>
-    typeof json === 'string' ? store.save(json) : { ok: false, error: 'bad payload' },
+  ipcMain.handle(IPC.sessionsList, (e) => (fromOwnPage(e) ? store.list() : []));
+  ipcMain.handle(IPC.sessionsSave, (e, json: unknown) =>
+    fromOwnPage(e) && typeof json === 'string' ? store.save(json) : { ok: false, error: 'bad payload' },
   );
-  ipcMain.handle(IPC.sessionsLoad, (_e, id: unknown) => (typeof id === 'string' ? store.load(id) : null));
-  ipcMain.handle(IPC.sessionsDelete, (_e, id: unknown) =>
-    typeof id === 'string' ? store.delete(id) : false,
+  ipcMain.handle(IPC.sessionsLoad, (e, id: unknown) =>
+    fromOwnPage(e) && typeof id === 'string' ? store.load(id) : null,
+  );
+  ipcMain.handle(IPC.sessionsDelete, (e, id: unknown) =>
+    fromOwnPage(e) && typeof id === 'string' ? store.delete(id) : false,
   );
   ipcMain.handle(IPC.sessionsReveal, async () => {
     const dir = path.join(app.getPath('userData'), 'sessions');

@@ -40,7 +40,7 @@ function QuestionCard({ q, total, record }: { q: QuestionResult; total: number; 
       day: 'numeric',
     });
     const res = await controller.savePng(
-      renderRecoveredCard(q, total, date),
+      renderRecoveredCard(q, total, date, record.config.gate),
       `composure-q${q.index + 1}-recovery.png`,
     );
     setSaved(res?.ok ? `Saved to ${res.path}` : res?.cancelled ? null : 'Could not save the card');

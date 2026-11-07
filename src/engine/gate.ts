@@ -168,8 +168,8 @@ export class GateDetector {
   /** Advance time without a sample (SDK stalled). The streak cannot grow without data. */
   tick(tMs: number): GateStatus {
     if (this._result || tMs <= this.lastT) return this._status;
-    const stale = this.lastSampleT === null || tMs - this.lastSampleT > 1_000;
-    if (!stale) return this._status;
+    const reference = this.lastSampleT ?? this.startMs;
+    if (tMs - reference <= this.cfg.stallMs) return this._status;
     return this.step(tMs, 'no-data');
   }
 
@@ -196,6 +196,7 @@ export class GateDetector {
   }
 
   private step(t: number, reason: OutReason | null): GateStatus {
+    // Late samples (after a stall tick moved the clock on) never count time twice.
     const dt = Math.max(0, t - this.lastT);
     const inBand = reason === null;
     if (inBand) {
@@ -205,7 +206,7 @@ export class GateDetector {
       this.streakStart = null;
       if (reason) this.outMs[reason] = (this.outMs[reason] ?? 0) + dt;
     }
-    this.lastT = t;
+    this.lastT = Math.max(this.lastT, t);
     const streakMs = this.streakStart === null ? 0 : t - this.streakStart;
     if (inBand && streakMs >= this.cfg.holdMs) {
       this.finish(t, 'settled', (this.streakStart as number) - this.startMs);

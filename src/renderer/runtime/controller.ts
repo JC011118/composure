@@ -124,6 +124,8 @@ export class SessionController {
   private hudPending: HudState | null = null;
   private hudTimer: ReturnType<typeof setTimeout> | null = null;
   private recordForSave: SessionRecord | null = null;
+  /** Increments per session so late async work from an old session cannot touch a new one. */
+  private generation = 0;
 
   async init(): Promise<void> {
     const bridge = window.composure;
@@ -163,6 +165,7 @@ export class SessionController {
       recordingSaved: null,
     });
     this.recordForSave = null;
+    this.generation++;
 
     let source: SignalSource;
     try {
@@ -293,20 +296,25 @@ export class SessionController {
 
   private async onDebrief(): Promise<void> {
     const opts = this.app.get().options;
+    const gen = this.generation;
     this.tap?.stop();
     if (opts.insightsOptIn && this.source?.insights) {
-      await this.requestInsight();
+      await this.requestInsight(gen);
     }
-    await this.stopSource();
+    // The user may have left and started another session while waiting.
+    if (gen === this.generation) await this.stopSource();
   }
 
-  private async requestInsight(): Promise<void> {
+  private async requestInsight(gen: number): Promise<void> {
     const engine = this.engine;
     const channel = this.source?.insights;
     if (!engine || !channel) return;
+    const patchIfCurrent = (p: Partial<AppState>) => {
+      if (gen === this.generation) this.patch(p);
+    };
     const record = engine.buildRecord({ id: 'pending', createdAt: new Date().toISOString(), appVersion: '' });
     const prompt = buildInsightPrompt(record);
-    this.patch({ insights: { status: 'requesting', records: [], message: null } });
+    patchIfCurrent({ insights: { status: 'requesting', records: [], message: null } });
     try {
       const reply = await new Promise<InsightReply | null>((resolve) => {
         let requestId: number | null = null;
@@ -338,7 +346,7 @@ export class SessionController {
           });
       });
       if (!reply) {
-        this.patch({
+        patchIfCurrent({
           insights: { status: 'error', records: [], message: 'No summary arrived from the service.' },
         });
         return;
@@ -350,11 +358,11 @@ export class SessionController {
         analysis: reply.analysis ? redactBannedTerms(reply.analysis) : null,
         error: reply.error ? redactBannedTerms(reply.error) : null,
       };
-      this.patch({
+      patchIfCurrent({
         insights: { status: rec.analysis ? 'done' : 'error', records: [rec], message: rec.error },
       });
     } catch (err) {
-      this.patch({
+      patchIfCurrent({
         insights: { status: 'error', records: [], message: err instanceof Error ? err.message : String(err) },
       });
     }
@@ -374,6 +382,7 @@ export class SessionController {
     if (!engine || !source) return;
     const t = source.now();
     this.tap?.mark(action, t);
+    if (action === 'manualEndAnswer' && engine.currentPhase === 'asking') this.voice.cancel();
     if (action === 'manualEndAnswer') engine.manualEndAnswer(t);
     else if (action === 'continueAfterGate') engine.continueAfterGate(t);
     else if (action === 'skipGate') engine.skipGate(t);

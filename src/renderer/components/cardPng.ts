@@ -45,7 +45,12 @@ export function cardHeadline(q: QuestionResult): string {
   }
 }
 
-export function renderRecoveredCard(q: QuestionResult, total: number, dateLabel: string): string {
+export function renderRecoveredCard(
+  q: QuestionResult,
+  total: number,
+  dateLabel: string,
+  gate: { holdMs: number; timeoutMs: number },
+): string {
   const canvas = document.createElement('canvas');
   canvas.width = W;
   canvas.height = H;
@@ -75,9 +80,9 @@ export function renderRecoveredCard(q: QuestionResult, total: number, dateLabel:
   ctx.font = '26px -apple-system, "Segoe UI", Inter, sans-serif';
   const sub =
     q.recovery === 'settled'
-      ? 'Breathing back inside my own seated band, then held there for 5 s.'
+      ? `Breathing back inside my own seated band, then held there for ${(gate.holdMs / 1000).toFixed(0)} s.`
       : q.recovery === 'timed out'
-        ? 'The Gate opened at its 45 s limit.'
+        ? `The Gate opened at its ${(gate.timeoutMs / 1000).toFixed(0)} s limit.`
         : 'No measurement for this pause.';
   ctx.fillText(sub, 64, 250);
 

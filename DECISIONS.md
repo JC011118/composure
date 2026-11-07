@@ -346,3 +346,31 @@ Each Gate result records how many milliseconds each criterion (gap, no-cycle,
 period, amplitude, held, excursion, no-data) kept it closed. Saved sessions
 carry it; `scripts/session-report.mjs` and `scripts/replay-check.ts` print it
 and map the dominant reason to the constant to loosen (MORNING_CHECKLIST.md).
+
+## D-033 Fixes from the independent review (round 1)
+
+An automated multi-lens review (engine, spec compliance, runtime, security —
+each finding then checked by an adversarial verifier) found these, all fixed
+with regression tests where testable:
+
+- "Skip to answering"/Enter during the question used to start Listening and
+  then immediately close the answer. It now only skips the question audio
+  (and cancels the speech).
+- The Gate's stall check compared the wall clock with sample time using a
+  fixed 1 s, so SDK latency > 1 s or ~1 s packet batching reset the streak on
+  every tick and every real Gate would have timed out. The engine now tells
+  the Gate about clock time only after `gate.stallMs` (2.5 s, configurable)
+  without samples, and late samples never count time twice in diagnostics.
+- Cue B now gets a grace period like cue A: silence counts toward ending the
+  answer only from cue time + estimated cue speech + `cueB.graceMs` (3 s).
+- A short sound that ended just before Listening began no longer counts as
+  the answer having started (it used to cancel the no-answer rule and record
+  a zero-length answer). Pulse deltas need ≥ 2 s of answer.
+- A slow LLM Insights reply from a finished session can no longer stop the
+  next session's camera (session generation guard).
+- `file://` trust is now the exact bundled `index.html` (or the dev server
+  origin in dev); the API-key and session IPC handlers check the sender frame;
+  file drops cannot navigate the window.
+- The PNG card's "held for N s" / "N s limit" text comes from the config;
+  the unused `hrv.confidenceMin` config field was removed (session HRV uses
+  the SDK's own `stable` flag).

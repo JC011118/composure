@@ -249,6 +249,100 @@ describe('InterviewEngine state machine', () => {
     if (r) expect(r.pauseCount).toBe(1);
   });
 
+  it('"Skip to answering" during the question only skips the audio', () => {
+    const run = new ScriptedRun({ talking: normalTalk }, { questions: 1 });
+    run.manualSpeech = true;
+    run.engine.begin(0);
+    run.runUntil(() => run.phase === 'asking', 200_000);
+    run.engine.manualEndAnswer(run.t + 500);
+    expect(run.engine.currentPhase).toBe('listening');
+    expect(run.events.some((e) => e.type === 'answerEnded')).toBe(false);
+    run.runTo(run.t + 60_000);
+    const [r] = run.engine.snapshotNow().results;
+    expect(r.answerStartMs).not.toBeNull();
+    expect(r.talkTimeMs).toBeGreaterThan(15_000);
+  });
+
+  it('the Gate still settles when samples arrive late and in 1 s batches', () => {
+    for (const { latency, batchMs } of [
+      { latency: 1_200, batchMs: 33 },
+      { latency: 300, batchMs: 1_000 },
+      { latency: 1_400, batchMs: 1_000 },
+    ]) {
+      const run = new ScriptedRun({ talking: normalTalk }, { questions: 1 });
+      run.engine.begin(0);
+      run.runUntil(() => run.phase === 'listening', 200_000);
+      const step = 1000 / 30;
+      let sampleT = run.t;
+      let delivered = run.t;
+      for (let clock = run.t; clock < run.t + 120_000; clock += 100) {
+        run.engine.tick(clock);
+        // Deliver everything captured up to (clock - latency), but only at batch boundaries.
+        const due = clock - latency;
+        if (due - delivered >= batchMs || batchMs <= 100) {
+          while (sampleT <= due) {
+            run.engine.ingest(run.sampleAt(Math.round(sampleT * 1000) / 1000));
+            sampleT += step;
+          }
+          delivered = due;
+        }
+        if (run.engine.snapshotNow().results.length > 0) break;
+      }
+      const [r] = run.engine.snapshotNow().results;
+      expect(r?.recovery, `latency ${latency} ms, batches ${batchMs} ms`).toBe('settled');
+      expect(Object.values(r.gate.outReasonMs ?? {}).reduce((a, b) => a + (b as number), 0)).toBeLessThan(
+        45_000,
+      );
+    }
+  });
+
+  it('cue B leaves room for the one-sentence summary', () => {
+    let cueAt: number | null = null;
+    const run: ScriptedRun = new ScriptedRun(
+      {
+        talking: (t: number, c: Ctx): boolean =>
+          c.phase === 'baselineTalking' ||
+          (c.phase === 'listening' &&
+            ((c.since >= 1_000 && cueAt === null) ||
+              (cueAt !== null && t >= cueAt + 5_500 && t < cueAt + 9_500))),
+      },
+      { questions: 1 },
+    );
+    run.engine.on((e) => {
+      if (e.type === 'cue' && e.event.cue === 'B') cueAt = e.event.tMs;
+    });
+    run.engine.begin(0);
+    run.runTo(400_000);
+    const [r] = run.engine.snapshotNow().results;
+    expect(cueAt).not.toBeNull();
+    // The summary (cue + 5.5 s .. cue + 9.5 s) is inside the answer.
+    expect(r.answerEndMs as number).toBeGreaterThanOrEqual((cueAt ?? Number.POSITIVE_INFINITY) + 9_400);
+    expect(r.series.talk.length).toBeGreaterThan(1);
+  });
+
+  it('a short sound that ended just before Listening is not an answer', () => {
+    // A 300 ms "mm-hm" ends 150 ms before the question audio finishes; the real answer starts 15 s later.
+    let listenAt: number | null = null;
+    const run: ScriptedRun = new ScriptedRun(
+      {
+        talking: (t: number, c: Ctx): boolean =>
+          c.phase === 'baselineTalking' ||
+          (c.phase === 'asking' && c.since >= 1_550 && c.since < 1_850) ||
+          (listenAt !== null && t >= listenAt + 15_000 && t < listenAt + 30_000),
+      },
+      { questions: 1 },
+    );
+    run.engine.on((e) => {
+      if (e.type === 'phase' && e.phase === 'listening') listenAt = e.tMs;
+    });
+    run.engine.begin(0);
+    run.runTo(300_000);
+    const [r] = run.engine.snapshotNow().results;
+    expect(r.timeToFirstWordMs as number).toBeGreaterThan(14_900);
+    expect(r.talkTimeMs).toBeGreaterThan(14_000);
+    expect(r.cues).toEqual([]);
+  });
+
   it('renders unusable signal spans as gaps (null), never numbers', () => {
     const run = new ScriptedRun(
       { talking: normalTalk, ok: (_t, c) => !listening(c, 15_000, 17_000) },

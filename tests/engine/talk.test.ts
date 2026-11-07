@@ -79,7 +79,7 @@ describe('AnswerTracker', () => {
       (t) => t >= 1_000 && t < 3_000,
       60_000,
       (t, x) => {
-        if (t >= 9_100 && !x.hasCue('A')) x.recordCue({ cue: 'A', tMs: t }, DEFAULT_CONFIG.cueA.graceMs);
+        if (t >= 9_100 && !x.hasCue('A')) x.recordCue({ cue: 'A', tMs: t }, t + DEFAULT_CONFIG.cueA.graceMs);
       },
     );
     // Floor = 9.1 + 6 = 15.1 s; end = floor + 4 s.

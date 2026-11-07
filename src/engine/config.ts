@@ -69,6 +69,11 @@ export interface CueAConfig {
 export interface CueBConfig {
   /** Answer still going (and user talking) after this long triggers the cut-in. */
   talkMs: number;
+  /**
+   * After the cut-in, end-of-answer silence counts only from
+   * (cue time + estimated cue speech + graceMs), so the user can start the summary.
+   */
+  graceMs: number;
   text: string;
 }
 
@@ -91,6 +96,12 @@ export interface GateConfig {
   turningPointSlack: number;
   /** How long the "Recovered" card stays up before the next question (user can skip). */
   postUnlockDwellMs: number;
+  /**
+   * No sample for this long (judged on the app clock) counts as a stalled signal:
+   * the streak resets and time keeps running toward the timeout. Must exceed the
+   * SDK's packet latency plus its packet interval.
+   */
+  stallMs: number;
 }
 
 export interface CycleConfig {
@@ -128,11 +139,6 @@ export interface AskingConfig {
   fallbackSlackMs: number;
 }
 
-export interface HrvConfig {
-  /** HRV readings at or above this confidence count as stable (SDK threshold is 50). */
-  confidenceMin: number;
-}
-
 export interface CameraFreeConfig {
   /** Fixed paced pause that replaces the Gate when the camera is off. */
   pauseMs: number;
@@ -148,7 +154,6 @@ export interface EngineConfig {
   cycles: CycleConfig;
   debrief: DebriefConfig;
   asking: AskingConfig;
-  hrv: HrvConfig;
   cameraFree: CameraFreeConfig;
 }
 
@@ -184,6 +189,7 @@ export const DEFAULT_CONFIG: EngineConfig = {
   },
   cueB: {
     talkMs: 150_000,
+    graceMs: 3_000,
     text: 'Let me stop you there — can you summarize in one sentence?',
   },
   gate: {
@@ -196,6 +202,7 @@ export const DEFAULT_CONFIG: EngineConfig = {
     excursionTolerance: 1.15,
     turningPointSlack: 0.75,
     postUnlockDwellMs: 6_000,
+    stallMs: 2_500,
   },
   cycles: {
     smoothingMs: 250,
@@ -214,7 +221,6 @@ export const DEFAULT_CONFIG: EngineConfig = {
     slowSeriesHz: 1,
   },
   asking: { msPerWord: 380, minMs: 2_500, fallbackSlackMs: 3_000 },
-  hrv: { confidenceMin: 50 },
   cameraFree: { pauseMs: 15_000 },
 };
 

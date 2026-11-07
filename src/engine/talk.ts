@@ -42,6 +42,11 @@ export class TalkDebouncer {
     return this._talking;
   }
 
+  /** The latest raw flag (true only while the SDK currently reports talking). */
+  get rawTalking(): boolean {
+    return this.rawTrueSince !== null;
+  }
+
   /** Feed one raw sample; returns an edge when the debounced state flips. */
   push(tMs: number, raw: boolean | undefined): TalkEdge | null {
     const r = raw === true;
@@ -110,9 +115,16 @@ export class AnswerTracker {
       if (this.answerStartMs === null) this.answerStartMs = at;
     } else {
       if (this.openSegStart === null) return;
-      if (at > this.openSegStart) this.segments.push({ startMs: this.openSegStart, endMs: at });
+      if (at > this.openSegStart) {
+        this.segments.push({ startMs: this.openSegStart, endMs: at });
+        this.lastTalkEndMs = at;
+      } else if (this.segments.length === 0) {
+        // Speech that really ended before Listening began: not an answer.
+        this.answerStartMs = null;
+      } else {
+        this.lastTalkEndMs = at;
+      }
       this.openSegStart = null;
-      this.lastTalkEndMs = at;
     }
   }
 
@@ -130,9 +142,10 @@ export class AnswerTracker {
     return this.answerStartMs !== null && tMs - this.answerStartMs >= this.cfg.minAnswerMs;
   }
 
-  recordCue(cue: CueEvent, graceMs: number): void {
+  /** Record a cue; end-of-answer silence will not be counted before `floorMs`. */
+  recordCue(cue: CueEvent, floorMs: number): void {
     this.cues.push(cue);
-    if (cue.cue === 'A') this.endClockFloorMs = Math.max(this.endClockFloorMs, cue.tMs + graceMs);
+    this.endClockFloorMs = Math.max(this.endClockFloorMs, floorMs);
   }
 
   /** Check end conditions at time t. */
