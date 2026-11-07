@@ -59,8 +59,8 @@ export interface CueAConfig {
   rateBandSdMultiplier: number;
   /** ... but never narrower than this (breaths/min). */
   minRateBandHalfWidth: number;
-  /** Minimum breathing-rate readings inside the silent span to confirm. */
-  minRateSamples: number;
+  /** Breathing-rate readings must cover at least this much of the silent span to confirm. */
+  minRateCoverageMs: number;
   /** After the cue, end-of-answer silence is counted from (cue time + graceMs). */
   graceMs: number;
   text: string;
@@ -178,7 +178,7 @@ export const DEFAULT_CONFIG: EngineConfig = {
     silenceMs: 6_000,
     rateBandSdMultiplier: 1.5,
     minRateBandHalfWidth: 1.0,
-    minRateSamples: 2,
+    minRateCoverageMs: 2_000,
     graceMs: 6_000,
     text: 'Take your time.',
   },
