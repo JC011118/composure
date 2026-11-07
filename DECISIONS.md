@@ -374,3 +374,20 @@ with regression tests where testable:
 - The PNG card's "held for N s" / "N s limit" text comes from the config;
   the unused `hrv.confidenceMin` config field was removed (session HRV uses
   the SDK's own `stable` flag).
+
+## D-034 Fixes from the independent review (security lens)
+
+- Packaged builds always point `SMARTSPECTRA_CAPI_PATH` at the bundled
+  runtime and ignore an inherited value; otherwise any local process could
+  launch the app with its own dylib running under Composure's camera
+  permission (the Electron fuses already block the Node-level equivalents).
+  The override still works in unpackaged dev runs.
+- The consent checkbox resets whenever the statement changes (switching
+  camera-free off), so the camera never starts on a box ticked for the
+  camera-free wording.
+- The permission *check* handler now uses `details.requestingUrl` and requires
+  `mediaType === 'video'`, matching the request handler (it previously
+  compared an origin with the exact page URL and ignored the media type).
+- Verified on a packaged Linux build with Chromium's fake camera
+  (`node scripts/smoke-sim.mjs --real --packaged`): the exact `file://` page
+  gets the key and the camera; frames reach the bundled runtime.

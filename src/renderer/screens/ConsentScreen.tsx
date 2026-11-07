@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useController, useStore } from '../runtime/hooks';
 
 const TELEMETRY_URL = 'https://smartspectra.presagetech.com/docs/telemetry-and-privacy';
@@ -25,6 +25,8 @@ export function ConsentScreen() {
   const boot = app.boot;
   const opts = app.options;
   const realCamera = boot?.mode === 'real' && !opts.cameraFree;
+  // The statement being agreed to changes with the camera setting: ask again.
+  useEffect(() => setAgreed(false), [realCamera]);
 
   return (
     <main className="screen" data-screen="consent">

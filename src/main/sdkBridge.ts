@@ -24,7 +24,10 @@ const NATIVE_LIB: Record<string, string> = {
  * package by itself.
  */
 export function configureNativeRuntimePath(isPackaged: boolean, resourcesPath: string): string | null {
-  if (!isPackaged || process.env.SMARTSPECTRA_CAPI_PATH) return null;
+  // Packaged builds ALWAYS use the bundled runtime: an inherited
+  // SMARTSPECTRA_CAPI_PATH would let any local process inject a library that
+  // runs under the app's camera permission. The override is dev-only.
+  if (!isPackaged) return null;
   const lib = NATIVE_LIB[process.platform];
   if (!lib) return null;
   const dir = `node-sdk-${process.platform}-${process.arch}`;

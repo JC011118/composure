@@ -11,6 +11,7 @@
  *   node scripts/smoke-sim.mjs --full --speed=8      # drive consent → debrief
  *   node scripts/smoke-sim.mjs --shots=out/shots     # screenshot directory
  *   node scripts/smoke-sim.mjs --camera-free          # camera-free session driven with the Space key
+ *   node scripts/smoke-sim.mjs --real --packaged       # same, against out/Composure-<plat>-<arch> (run `npm run package` first)
  *   node scripts/smoke-sim.mjs --real --observe=40    # REAL mode with Chromium's fake camera:
  *                                                     # checks the SDK wiring end to end (needs PRESAGE_API_KEY)
  *
@@ -37,6 +38,7 @@ const PORT = Number(flag('port', 9333));
 const SCENARIO = String(flag('scenario', 'demo'));
 const REAL = Boolean(flag('real', false));
 const CAMERA_FREE = Boolean(flag('camera-free', false));
+const PACKAGED = Boolean(flag('packaged', false));
 const OBSERVE_S = Number(flag('observe', 40));
 const TIMEOUT_MS = Number(
   flag('timeout', FULL ? 420_000 : REAL ? OBSERVE_S * 1000 + 90_000 : CAMERA_FREE ? 240_000 : 90_000),
@@ -69,10 +71,14 @@ if (REAL && !process.env.PRESAGE_API_KEY && !process.env.SMARTSPECTRA_API_KEY) {
 if (process.platform === 'linux' && typeof process.getuid === 'function' && process.getuid() === 0) {
   appArgs.push('--no-sandbox');
 }
-const forgeCmd = ['electron-forge', 'start', '--', ...appArgs];
+const exe =
+  process.platform === 'darwin'
+    ? `out/Composure-darwin-${process.arch}/Composure.app/Contents/MacOS/Composure`
+    : `out/Composure-${process.platform}-${process.arch}/composure`;
+const launch = PACKAGED ? [exe, ...appArgs] : ['npx', 'electron-forge', 'start', '--', ...appArgs];
 const useXvfb = process.platform === 'linux' && !process.env.DISPLAY;
-const cmd = useXvfb ? 'xvfb-run' : 'npx';
-const cmdArgs = useXvfb ? ['-a', 'npx', ...forgeCmd] : forgeCmd;
+const cmd = useXvfb ? 'xvfb-run' : launch[0];
+const cmdArgs = useXvfb ? ['-a', ...launch] : launch.slice(1);
 
 console.log(`smoke-sim: launching ${cmd} ${cmdArgs.join(' ')}`);
 const child = spawn(cmd, cmdArgs, { stdio: ['ignore', 'pipe', 'pipe'], detached: true });

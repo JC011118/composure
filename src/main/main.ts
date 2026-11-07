@@ -84,9 +84,9 @@ function installPermissionHandlers(): void {
     const cameraOnly = mediaTypes.length === 1 && mediaTypes[0] === 'video';
     callback(cli.mode === 'real' && permission === 'media' && cameraOnly && isOwnPage(url));
   });
-  session.defaultSession.setPermissionCheckHandler((_wc, permission, requestingOrigin) => {
-    if (permission !== 'media') return false;
-    return cli.mode === 'real' && isOwnPage(requestingOrigin);
+  session.defaultSession.setPermissionCheckHandler((_wc, permission, _origin, details) => {
+    if (permission !== 'media' || cli.mode !== 'real') return false;
+    return details.mediaType === 'video' && isOwnPage(details.requestingUrl ?? '');
   });
 }
 
