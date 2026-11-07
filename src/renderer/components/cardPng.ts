@@ -75,16 +75,31 @@ export function renderRecoveredCard(
 
   ctx.fillStyle = '#7d8b9a';
   ctx.font = '600 22px -apple-system, "Segoe UI", Inter, sans-serif';
-  ctx.fillText(`COMPOSURE · QUESTION ${q.index + 1} OF ${total}`, 64, 82);
+  const header = `COMPOSURE · QUESTION ${q.index + 1} OF ${total}`;
+  ctx.fillText(header, 64, 82);
+  const headerEnd = 64 + ctx.measureText(header).width + 24;
   if (provenance) {
     // Never let a simulated or replayed card pass as a live measurement.
-    ctx.font = '700 22px ui-monospace, Menlo, monospace';
-    const tw = ctx.measureText(provenance).width;
+    // One line if it fits beside the header, else two lines (split at " · "), shrinking if needed.
+    let size = 22;
+    let lines = [provenance];
+    const fits = (ls: string[], px: number) => {
+      ctx.font = `700 ${px}px ui-monospace, Menlo, monospace`;
+      return Math.max(...ls.map((l) => ctx.measureText(l).width)) + 24 <= W - 64 - headerEnd;
+    };
+    if (!fits(lines, size)) {
+      const parts = provenance.split(' · ');
+      lines = parts.length > 1 ? [parts[0], parts.slice(1).join(' · ')] : lines;
+      while (!fits(lines, size) && size > 12) size--;
+    }
+    ctx.font = `700 ${size}px ui-monospace, Menlo, monospace`;
+    const tw = Math.max(...lines.map((l) => ctx.measureText(l).width));
+    const lineH = size + 6;
     ctx.fillStyle = 'rgba(251,191,119,0.16)';
-    ctx.fillRect(W - 64 - tw - 24, 52, tw + 24, 42);
+    ctx.fillRect(W - 64 - tw - 24, 52, tw + 24, 18 + lineH * lines.length);
     ctx.fillStyle = '#fbbf77';
     ctx.textAlign = 'right';
-    ctx.fillText(provenance, W - 64 - 12, 81);
+    lines.forEach((l, i) => ctx.fillText(l, W - 64 - 12, 52 + 8 + size + i * lineH));
     ctx.textAlign = 'left';
   }
 
@@ -100,11 +115,15 @@ export function renderRecoveredCard(
       : q.recovery === 'timed out'
         ? `The Gate opened at its ${(gate.timeoutMs / 1000).toFixed(0)} s limit.`
         : 'No measurement for this pause.';
-  ctx.fillText(sub, 64, 250);
+  const subLines = wrap(ctx, sub, W - 128, 2);
+  subLines.forEach((line, i) => ctx.fillText(line, 64, 250 + i * 32));
+  const shift = (subLines.length - 1) * 32;
 
   ctx.fillStyle = '#e9f0f6';
   ctx.font = '500 30px -apple-system, "Segoe UI", Inter, sans-serif';
-  wrap(ctx, `“${q.text}”`, W - 128, 2).forEach((line, i) => ctx.fillText(line, 64, 318 + i * 40));
+  wrap(ctx, `“${q.text}”`, W - 128, shift > 0 ? 1 : 2).forEach((line, i) =>
+    ctx.fillText(line, 64, 318 + shift + i * 40),
+  );
 
   // Gate-period breathing trace.
   const gateRel = q.series.marks.gateMs;

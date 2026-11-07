@@ -15,6 +15,10 @@ import type { SeriesPoint } from './metrics';
 import type { AnswerEndReason, CueEvent, QuestionTag, SignalMode, TalkSegment } from './types';
 
 export const NOT_ENOUGH_SIGNAL = 'not enough clean signal';
+/** The answer may have clean pulse, but the talking baseline had none to compare against. */
+export const NO_TALKING_BASELINE_PULSE = 'no clean pulse in the talking baseline';
+/** The silences may have breathing readings, but the seated baseline had no breathing rate. */
+export const NO_SEATED_BASELINE_RATE = 'no seated breathing-rate baseline';
 
 export interface PulseResult {
   /** Mean clean pulse during the answer minus the TALKING baseline mean. Null when not shown. */

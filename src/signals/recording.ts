@@ -141,7 +141,11 @@ export class RecordingTap {
     return {
       format: RECORDING_FORMAT,
       version: RECORDING_VERSION,
-      source: this.source.kind,
+      // A re-recorded replay keeps the original origin (e.g. 'simulated').
+      source:
+        this.source.kind === 'replay'
+          ? ((this.source as { origin?: SignalMode }).origin ?? 'replay')
+          : this.source.kind,
       createdAt,
       durationMs: last - first,
       samples: [...this.samples],

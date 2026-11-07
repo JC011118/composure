@@ -153,6 +153,10 @@ The debrief shows it under "Pulse vs talking baseline" ("clean N %"), and
 | 4 | | |
 | 5 | | |
 
+- If coverage is ≥ 60 % but no delta is shown, the debrief says "no clean
+  pulse in the talking baseline" (and `session-report.mjs` prints a note):
+  the read-aloud baseline itself had no pulse at confidence ≥ 40. Re-run with
+  better light and keep your head still while reading.
 - ≥ 3 of 5 answers at ≥ 60 %: fine, keep the rule.
 - Mostly below 60 %: expected for camera pulse while talking. Improve light
   first (even, frontal, no flicker) and keep your head still while you speak.

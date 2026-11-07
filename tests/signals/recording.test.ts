@@ -37,6 +37,18 @@ describe('recordToJson + replay', () => {
     expect(out[10].breathingTrace).toBe(rec.samples[10].breathingTrace);
   });
 
+  it('re-recording a replay keeps the original source', () => {
+    const sim = new SimulatedSignalSource({ seed: 4 });
+    const tap = recordToJson(sim);
+    sim.stepTo(3_000);
+    tap.stop();
+    const replay = new ReplaySignalSource(parseRecording(tap.toJson('2026-11-07T00:00:00.000Z')));
+    const tap2 = recordToJson(replay);
+    replay.stepTo(10_000);
+    tap2.stop();
+    expect(parseRecording(tap2.toJson('2026-11-07T00:00:00.000Z')).source).toBe('simulated');
+  });
+
   it('rejects malformed recordings', () => {
     expect(() => parseRecording('nope')).toThrow(/JSON/);
     expect(() => parseRecording('{"format":"x"}')).toThrow(/Composure/);

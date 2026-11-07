@@ -23,6 +23,8 @@ import { decideCueA, decideCueB } from './cues';
 import { computeBand, GateDetector, type Band, type GateResult, type GateStatus } from './gate';
 import { bucketSeries, silentSpans, timeWeighted, timeWeightedSpans } from './metrics';
 import {
+  NO_SEATED_BASELINE_RATE,
+  NO_TALKING_BASELINE_PULSE,
   NOT_ENOUGH_SIGNAL,
   type BreathingResult,
   type InsightRecord,
@@ -788,7 +790,7 @@ export class InterviewEngine {
         meanBpm: shown ? st.mean : null,
         coverage: st.coverage,
         shown,
-        reason: shown ? null : NOT_ENOUGH_SIGNAL,
+        reason: shown ? null : base === null ? NO_TALKING_BASELINE_PULSE : NOT_ENOUGH_SIGNAL,
       };
     }
 
@@ -817,7 +819,7 @@ export class InterviewEngine {
         meanBrPerMin: shown ? st.mean : null,
         silentCoveredMs: st.coveredMs,
         shown,
-        reason: shown ? null : NOT_ENOUGH_SIGNAL,
+        reason: shown ? null : base === null ? NO_SEATED_BASELINE_RATE : NOT_ENOUGH_SIGNAL,
       };
     }
 

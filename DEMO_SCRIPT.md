@@ -53,13 +53,18 @@ session** after Gate #2; the debrief keeps the completed questions).
 
 ## Retake guide
 
-- **"Take your time." didn't fire.** It needs ≥ 6 s of silence after you've
-  started answering *and* breathing during that silence above your seated
-  band. Stay silent longer (8–10 s), and make sure you said a few words first
-  (silence before the first word doesn't count). It fires once per question.
+- **"Take your time." didn't fire.** It needs more than 6 s of silence after
+  you've started answering *and* breathing during that silence above your
+  seated band (it usually confirms 1–3 s after the 6 s mark). Timing matters:
+  the freeze must start **within about 5 s of your first word**. Once the
+  answer has run 10 s, 4 s of silence closes it, so a silence that starts after
+  ~8 s of talking can never reach the cue. Say one short phrase ("That's… a good
+  question."), then stay silent 8–10 s. Silence before the first word doesn't
+  count. It fires once per question.
 - **The answer closed too early.** End-detection only arms 10 s after your
   first word, then needs 4 s of silence. If you paused longer than 4 s after
-  the 10 s mark, it closed. Keep pauses shorter once you're into the answer.
+  the 10 s mark, it closed. Keep pauses shorter once you're into the answer
+  (this is also why the cue's freeze has to come early; see above).
 - **The Gate won't open.** Sit still and breathe at your normal pace. If the
   HUD's chip turns orange, check framing and light (the hint says what's
   wrong). It opens anyway at 45 s ("recovery: timed out"), which is also a

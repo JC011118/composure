@@ -16,9 +16,9 @@ your Mac's camera, and Composure uses those signals four ways:
 
 1. **Hands-free interviewing.** Your answer starts when you start talking and
    ends after a natural pause. No buttons, no "press when done".
-2. **Gentle live cues.** If you go quiet mid-answer for more than six seconds
-   *and* your breathing during that silence is above your own seated band, the
-   interviewer says "Take your time." If you've been talking for two and a
+2. **Gentle live cues.** If you freeze early in an answer for more than six
+   seconds *and* your breathing during that silence is above your own seated
+   band, the interviewer says "Take your time." If you've been talking for two and a
    half minutes, it asks: "Let me stop you there — can you summarize in one
    sentence?"
 3. **The Composure Gate.** After each answer, the next question waits until

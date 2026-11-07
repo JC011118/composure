@@ -8,9 +8,10 @@ camera signals from the [SmartSpectra SDK](https://smartspectra.presagetech.com/
 
 1. **Run the interview hands-free.** Your answer starts when you start talking
    and ends after a pause, with no buttons.
-2. **Give gentle live cues.** After a long mid-answer silence with breathing
-   above your seated band, the interviewer says "Take your time." After 2½
-   minutes of talking, it asks for a one-sentence summary.
+2. **Give gentle live cues.** After a long silence early in an answer (more
+   than 6 s, starting before end-detection arms at 10 s) with breathing above
+   your seated band, the interviewer says "Take your time." After 2½ minutes
+   of talking, it asks for a one-sentence summary.
 3. **Gate the next question behind the Composure Gate.** After each answer,
    your live breathing trace has to settle back into your own seated band
    (period and depth within 1.5 SD) and stay there for 5 seconds. A water

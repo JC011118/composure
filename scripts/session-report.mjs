@@ -94,6 +94,11 @@ for (const { file, s } of sessions) {
     gates.push(q);
     if (q.answerStartMs !== null) answers.push(q);
   }
+  if (!s.baselines?.talking?.pulse) {
+    console.log(
+      '  note: the talking baseline had no clean pulse, so no pulse delta can be shown for any answer',
+    );
+  }
   if (s.hrv)
     console.log(
       `  session HRV: rmssd ${s.hrv.rmssd.toFixed(0)} ms, stable=${s.hrv.stable}, conf ${s.hrv.confidence.toFixed(0)}`,
@@ -116,7 +121,7 @@ console.log(
 console.log(`  median recovery (settled): ${fmt(med(settled.map((q) => q.recoveryTimeMs)))}`);
 const covs = answers.map((q) => q.pulse?.coverage ?? 0);
 console.log(
-  `  pulse coverage per answer: ${covs.map(pct).join(' ')}   (≥60% needed to show a pulse delta: ${covs.filter((c) => c >= 0.6).length}/${covs.length})`,
+  `  pulse coverage per answer: ${covs.map(pct).join(' ')}   (≥60% needed: ${covs.filter((c) => c >= 0.6).length}/${covs.length}; delta actually shown: ${answers.filter((q) => q.pulse?.shown).length}/${answers.length})`,
 );
 
 const totals = {};

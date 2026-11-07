@@ -4,7 +4,7 @@
  * (so a Gate can still time out) but no more samples arrive.
  */
 
-import type { SignalSample, SignalStatus } from '../engine/types';
+import type { SignalMode, SignalSample, SignalStatus } from '../engine/types';
 import { Emitter, type SignalSource, type SourceError, type Unsubscribe } from './SignalSource';
 import type { SignalRecording } from './recording';
 
@@ -18,6 +18,8 @@ export interface ReplayOptions {
 
 export class ReplaySignalSource implements SignalSource {
   readonly kind = 'replay' as const;
+  /** What originally produced the recording (kept when a replay is re-recorded). */
+  readonly origin: SignalMode;
   private readonly samples = new Emitter<SignalSample>();
   private readonly statuses = new Emitter<SignalStatus>();
   private readonly errors = new Emitter<SourceError>();
@@ -39,6 +41,7 @@ export class ReplaySignalSource implements SignalSource {
     opts: ReplayOptions = {},
   ) {
     this.t0 = opts.timeBaseMs ?? recording.samples[0]?.tMs ?? 0;
+    this.origin = recording.source;
     this.speed = opts.speed ?? 1;
     this.tickMs = opts.tickMs ?? 50;
     this.wallClock = opts.wallClock ?? (() => performance.now());

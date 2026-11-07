@@ -9,9 +9,10 @@ import { useController } from '../runtime/hooks';
 function reasonText(reason: OutReason | null, snap: EngineSnapshot): string {
   const g = snap.gate?.status;
   const band = snap.gate?.band;
+  const which = band?.personal === false ? 'the default band' : 'your seated band';
   switch (reason) {
     case null:
-      return 'Inside your band';
+      return band?.personal === false ? 'Inside the default band' : 'Inside your band';
     case 'gap':
       return 'Signal gap — hold still and face the camera';
     case 'no-data':
@@ -25,17 +26,17 @@ function reasonText(reason: OutReason | null, snap: EngineSnapshot): string {
     case 'period':
       if (g?.latest && band) {
         return g.latest.periodMs < band.periodLoMs
-          ? 'Breaths are quicker than your seated band'
-          : 'Breaths are slower than your seated band';
+          ? `Breaths are quicker than ${which}`
+          : `Breaths are slower than ${which}`;
       }
-      return 'Breath timing is outside your band';
+      return 'Breath timing is outside the band';
     case 'amplitude':
       if (g?.latest && band) {
         return g.latest.amplitude > band.ampHi
-          ? 'Breaths are deeper than your seated band'
-          : 'Breaths are shallower than your seated band';
+          ? `Breaths are deeper than ${which}`
+          : `Breaths are shallower than ${which}`;
       }
-      return 'Breath depth is outside your band';
+      return 'Breath depth is outside the band';
     default:
       return '';
   }
@@ -131,7 +132,11 @@ export function GateScreen({ engine, snap }: { engine: InterviewEngine; snap: En
           : `before question ${snap.questionIndex + 2} of ${snap.questionCount}`}
       </p>
       <h1 className="headline">
-        {paced ? 'Take a slow, even pause' : 'Let your breathing settle back into your band'}
+        {paced
+          ? 'Take a slow, even pause'
+          : gate?.band && !gate.band.personal
+            ? 'Let your breathing settle into the band'
+            : 'Let your breathing settle back into your band'}
       </h1>
 
       <div className="gate-hero" data-testid="gate-hero">

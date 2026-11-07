@@ -473,3 +473,23 @@ long answer gets the 2:30 cut-in.
   button no longer steals Enter's focus; "Save signal recording" is hidden in
   camera-free mode (nothing is recorded); "Save session" waits for a pending
   Insights reply.
+
+## D-039 Fixes from review round 3 (regression + walkthrough)
+
+- PNG card: the provenance stamp splits into two lines (and shrinks if needed)
+  when it would collide with the header, and the subline wraps. Checked by
+  rendering the card in headless Chromium for the longest label.
+- The live Gate status ("Breaths are quicker than …", "Inside …") and headline
+  name the default band when the Gate is not using a personal band.
+- Re-recording a replay keeps the original source (`ReplaySignalSource.origin`),
+  so a simulated session stays labelled as simulated through any number of
+  replays.
+- Debrief reasons distinguish "no clean pulse in the talking baseline" and
+  "no seated breathing-rate baseline" from "not enough clean signal", so an
+  answer with high clean coverage is never shown as a coverage failure; the
+  session report prints a note and counts deltas actually shown.
+- Cue A timing (docs only): with the brief's rules (answer closes after 4 s of
+  silence once it has run 10 s; the cue needs > 6 s of silence), "Take your
+  time." can only fire when the freeze starts within ~5-8 s of the first word.
+  The engine is unchanged (all three are spec values); README, DEV_POST and the
+  demo retake guide now say so.

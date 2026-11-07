@@ -100,7 +100,9 @@ function QuestionCard({ q, total, record }: { q: QuestionResult; total: number; 
           sub={
             q.pulse.shown && talkingPulse !== null
               ? `baseline ${talkingPulse.toFixed(0)} bpm · clean ${(q.pulse.coverage * 100).toFixed(0)} %`
-              : `clean coverage ${(q.pulse.coverage * 100).toFixed(0)} % (needs 60 %)`
+              : talkingPulse === null
+                ? 'nothing to compare against'
+                : `clean coverage ${(q.pulse.coverage * 100).toFixed(0)} % (needs 60 %)`
           }
         />
         <Metric
