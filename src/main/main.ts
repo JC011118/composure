@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, session, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, session, shell, systemPreferences } from 'electron';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -82,7 +82,20 @@ function installPermissionHandlers(): void {
     const url = (details && 'requestingUrl' in details && details.requestingUrl) || wc?.getURL() || '';
     const mediaTypes = (details && 'mediaTypes' in details && details.mediaTypes) || [];
     const cameraOnly = mediaTypes.length === 1 && mediaTypes[0] === 'video';
-    callback(cli.mode === 'real' && permission === 'media' && cameraOnly && isOwnPage(url));
+    const allowed = cli.mode === 'real' && permission === 'media' && cameraOnly && isOwnPage(url);
+    if (!allowed || process.platform !== 'darwin') {
+      callback(allowed);
+      return;
+    }
+    // macOS: make sure the system camera prompt (TCC) is shown and honoured.
+    if (systemPreferences.getMediaAccessStatus('camera') === 'granted') {
+      callback(true);
+      return;
+    }
+    systemPreferences
+      .askForMediaAccess('camera')
+      .then((granted) => callback(granted))
+      .catch(() => callback(false));
   });
   session.defaultSession.setPermissionCheckHandler((_wc, permission, _origin, details) => {
     if (permission !== 'media' || cli.mode !== 'real') return false;
