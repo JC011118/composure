@@ -36,9 +36,9 @@ your Mac's camera, and Composure uses those signals four ways:
    shown once, with the SDK's `stable` flag. Any span where the SDK said the
    signal was not usable is drawn as a gap, never as a number.
 
-Everything is relative to *your* baseline from *this* session. There are no
-population norms, no scores, and no labels for how you feel. It is a
-rehearsal tool, not a medical device.
+Every delta is relative to *your* baseline from *this* session, shown next to
+that baseline. There are no population norms, no scores, and no labels for how
+you feel. It is a rehearsal tool, not a medical device.
 
 ## Demo
 
@@ -142,9 +142,9 @@ Entering **Best Thoughtful Real-World Use**.
 - **Nothing stored by default.** "Save session" writes a JSON file of
   numbers to your Mac's app-data folder; the in-app Saved sessions list opens
   and deletes them. No frames, images, video, or audio, ever.
-- **Cloud is opt-in.** LLM Insights (off by default) sends baseline-relative
-  numbers and the SDK's buffered metric values (never imagery) for a written
-  summary, shown with a reminder that it can be wrong. Any feelings label in
+- **Cloud is opt-in.** LLM Insights (off by default) sends per-question
+  timings, baseline-relative deltas, the baseline means, and the SDK's buffered
+  metric values (never imagery) for a written summary, shown with a reminder that it can be wrong. Any feelings label in
   the reply is redacted. The SDK's automatic vitals snapshots, which its
   documentation says it sends on its own during a measurement, are never
   displayed. Camera-free mode avoids the SDK entirely.

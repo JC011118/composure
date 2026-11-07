@@ -23,7 +23,7 @@ first; then MORNING_CHECKLIST.md.
 
 | What | How | Result |
 | --- | --- | --- |
-| Unit and integration tests | `npm test` | 18 files, ~300 tests, all passing |
+| Unit and integration tests | `npm test` | 20 files, 300+ tests, all passing |
 | Lint + typecheck (incl. no-DOM engine typecheck) | `npm run lint` | clean |
 | Banned words absent from every source/doc file | `tests/bannedWords.test.ts` | passing |
 | Engine purity; SDK imported only in PresageSignalSource (+ main/preload wiring) | `tests/architecture.test.ts` | passing |

@@ -32,7 +32,9 @@ export function InterviewScreen({ engine, snap }: { engine: InterviewEngine; sna
   // Keyboard: Enter = done answering; Space = talking (camera-free only).
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
-      if (e.key === 'Enter') controller.manualEndAnswer();
+      // A focused button handles its own Enter; key repeat must not fire twice.
+      if (e.key === 'Enter' && !e.repeat && !(e.target instanceof HTMLButtonElement))
+        controller.manualEndAnswer();
       if (cameraFree && e.code === 'Space' && !e.repeat) {
         e.preventDefault();
         controller.setManualTalking(true);

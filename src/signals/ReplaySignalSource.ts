@@ -9,6 +9,8 @@ import { Emitter, type SignalSource, type SourceError, type Unsubscribe } from '
 import type { SignalRecording } from './recording';
 
 export interface ReplayOptions {
+  /** Time subtracted from recorded times (default: the first sample's time). */
+  timeBaseMs?: number;
   speed?: number;
   tickMs?: number;
   wallClock?: () => number;
@@ -36,7 +38,7 @@ export class ReplaySignalSource implements SignalSource {
     private readonly recording: SignalRecording,
     opts: ReplayOptions = {},
   ) {
-    this.t0 = recording.samples[0]?.tMs ?? 0;
+    this.t0 = opts.timeBaseMs ?? recording.samples[0]?.tMs ?? 0;
     this.speed = opts.speed ?? 1;
     this.tickMs = opts.tickMs ?? 50;
     this.wallClock = opts.wallClock ?? (() => performance.now());

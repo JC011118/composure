@@ -69,6 +69,7 @@ export function runHeadless(opts: HeadlessOptions): HeadlessRun {
         begun = true;
       }
       source.stepTo(t);
+      opts.onAction?.('tick', t);
       engine.tick(t);
       for (let i = pendingSpeech.length - 1; i >= 0; i--) {
         if (pendingSpeech[i].at <= t) {
@@ -122,6 +123,9 @@ export function runReplay(opts: ReplayRunOptions): HeadlessRun {
       case 'begin':
         engine.begin(t);
         break;
+      case 'tick':
+        engine.tick(t);
+        break;
       case 'speechEnded':
         if (a.speechId !== undefined) engine.speechEnded(a.speechId, t);
         break;
@@ -131,6 +135,9 @@ export function runReplay(opts: ReplayRunOptions): HeadlessRun {
       case 'continueAfterGate':
         engine.continueAfterGate(t);
         break;
+      case 'holdAfterGate':
+        engine.holdAfterGate(t);
+        break;
       case 'skipGate':
         engine.skipGate(t);
         break;
@@ -139,12 +146,15 @@ export function runReplay(opts: ReplayRunOptions): HeadlessRun {
         break;
     }
   };
+  // Recordings made with tick marks replay the live clock exactly; older ones
+  // fall back to ticking at each sample's own time.
+  const recordedTicks = actions.some((a) => a.action === 'tick');
   try {
     for (;;) {
       while (ai < actions.length && actions[ai].afterSamples <= source.emittedCount) apply(actions[ai++]);
       if (!source.stepOne()) break;
       lastT = Math.max(lastT, source.now());
-      engine.tick(source.now());
+      if (!recordedTicks) engine.tick(source.now());
     }
     while (ai < actions.length) apply(actions[ai++]);
     const tail = opts.tailMs ?? 120_000;

@@ -32,7 +32,10 @@ export function replaySession(
   const recorded = mergeConfig(DEFAULT_CONFIG, (session.config ?? null) as DeepPartial<EngineConfig> | null);
   const config = mergeConfig(recorded, override ?? null);
   const engine = new InterviewEngine({ questions, mode: 'replay', config });
-  const source = new ReplaySignalSource(recording);
+  // Re-base on the earliest recorded moment: the user may begin before the first sample arrives.
+  const firstSample = recording.samples[0]?.tMs ?? 0;
+  const firstAction = session.actions.reduce((m, a) => Math.min(m, a.tMs), Number.POSITIVE_INFINITY);
+  const source = new ReplaySignalSource(recording, { timeBaseMs: Math.min(firstSample, firstAction) });
   const run = runReplay({ engine, source, actions: session.actions });
   const record = engine.buildRecord({
     id: 'replay',

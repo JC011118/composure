@@ -418,3 +418,33 @@ demo scenario produces: Gate 1 settles in 11-22 s, the hard question gets
 "Take your time." and settles in 8-18 s, the low-signal answer shows "not
 enough clean signal" for pulse, the slow settle times out at 45 s, and the
 long answer gets the 2:30 cut-in.
+
+## D-037 Fixes from review round 2 (docs + new code)
+
+- Listening no longer jumps to the wall clock after a fixed 1.5 s without
+  samples; it uses `listening.stallMs` (2.5 s, configurable) and advances time
+  only past the stall. With 1 s packet batching and ~1 s latency the old rule
+  closed answers mid-sentence. Regression test with 0.8-1.6 s latency.
+- Recordings now include the app's clock ticks, and replays apply them at the
+  same points in the sample stream (and re-base on the earliest of first
+  sample / first action). Without this, any real recording made under SDK
+  latency replayed to a different debrief. A test emulates the SDK path
+  (late, batched samples + 100 ms clock ticks) and requires the replay to
+  match the live debrief exactly.
+- Enter ignores key repeat and focused buttons, and the engine ignores a
+  manual end within 500 ms of Listening starting, so skip + end cannot fire
+  together.
+- "End session" during a Gate (or mid-answer) keeps the answer just given,
+  with its Gate recorded as "skipped".
+- Saving the Recovered card holds it on screen until Next is clicked
+  (`holdAfterGate`, recorded for replay), so the save dialog can't race the
+  auto-advance.
+- Tests pin their own copy of today's constants (`tests/engine/testConfig.ts`)
+  so tuning `config.ts` does not break behavior tests; `config.test.ts` alone
+  checks the brief's spec values.
+- Docs corrected: the debrief shows the depth band; MORNING_CHECKLIST saves
+  the recording before relaunching; README gives the real fixture command;
+  CONSENT_AND_DATA/DEV_POST/README describe exactly what the LLM prompt
+  contains, which requested metrics are unused (`lowerTrace`, `blinking`),
+  and that the HUD shows raw SDK readings while debrief numbers are
+  baseline-relative deltas.

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { decideCueA, decideCueB, rateBandUpper } from '../../src/engine/cues';
-import { DEFAULT_CONFIG } from '../../src/engine/config';
+import { TEST_CONFIG as DEFAULT_CONFIG } from './testConfig';
 
 const A = DEFAULT_CONFIG.cueA;
 const seated = { mean: 14, sd: 0.5, n: 300 };

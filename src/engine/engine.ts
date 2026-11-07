@@ -118,13 +118,6 @@ interface QuestionState {
 }
 
 const SNAPSHOT_INTERVAL_MS = 100;
-/**
- * Real SDK packets arrive a little after the moment they describe, while the
- * app ticks on the wall clock. Listening decisions (end of answer, cues) use
- * sample time while samples are flowing and fall back to the clock only when
- * samples have stalled for this long.
- */
-const SAMPLE_STALL_MS = 1_500;
 /** A pulse delta needs at least this much answer to average over. */
 const MIN_PULSE_SPAN_MS = 2_000;
 
@@ -333,6 +326,9 @@ export class InterviewEngine {
       this.speaking = null;
       this.enterListening(this.nowMs);
     } else if (this.phase === 'listening' && this.q?.tracker) {
+      // A second activation right after skipping the question audio (key repeat,
+      // button + key) must not close the answer before it starts.
+      if (this.nowMs - this.phaseStartMs < 500) return;
       const end = this.q.tracker.end(this.nowMs, 'manual');
       this.enterGate(end.tMs, end.reason);
     }
@@ -345,6 +341,15 @@ export class InterviewEngine {
     if (this.phase === 'gate' && this.q?.gateResult) {
       this.q.dwellUntilMs = this.nowMs;
       this.advance(this.nowMs);
+    }
+  }
+
+  /** Keep the "Recovered" card up until continueAfterGate (e.g. while the user saves it). */
+  holdAfterGate(tMs: number): void {
+    this.nowMs = Math.max(this.nowMs, tMs);
+    if (this.phase === 'gate' && this.q?.gateResult) {
+      this.q.dwellUntilMs = Number.POSITIVE_INFINITY;
+      this.notify(true);
     }
   }
 
@@ -363,12 +368,24 @@ export class InterviewEngine {
   endSession(tMs: number): void {
     this.nowMs = Math.max(this.nowMs, tMs);
     if (this.phase === 'consent' || this.phase === 'debrief') return;
+    this.speaking = null;
+    // Keep an answer the user already gave: close it and its Gate as skipped.
+    if (this.phase === 'listening' && this.q?.tracker?.answerStarted) {
+      const end = this.q.tracker.end(this.nowMs, 'manual');
+      this.enterGate(end.tMs, end.reason);
+    }
+    if (this.phase === 'gate' && this.q && !this.q.gateResult) {
+      this.completeGate(
+        this.q.gate
+          ? this.q.gate.skip(this.nowMs)
+          : this.makeResult(this.q.gateStartMs ?? this.nowMs, this.nowMs, 'skipped'),
+      );
+    }
     if (this.questions.length > this.results.length) {
       this.notes.push(
         `Session ended early after ${this.results.length} of ${this.questions.length} questions.`,
       );
     }
-    this.speaking = null;
     this.enterDebrief(this.nowMs);
   }
 
@@ -475,8 +492,14 @@ export class InterviewEngine {
         break;
       }
       case 'listening': {
-        const stalled = now - this.lastSampleMs > SAMPLE_STALL_MS;
-        this.updateListening(stalled ? now : Math.max(this.lastSampleMs, this.phaseStartMs));
+        // Real SDK packets describe moments ~0.5-1.5 s in the past while the app
+        // ticks on the wall clock. Decide on sample time; if samples stall, let
+        // time advance only by the part of the stall beyond listening.stallMs.
+        const decisionT = Math.min(
+          now,
+          Math.max(this.lastSampleMs, this.phaseStartMs, now - this.config.listening.stallMs),
+        );
+        this.updateListening(decisionT);
         break;
       }
       case 'gate':

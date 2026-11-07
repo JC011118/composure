@@ -68,7 +68,7 @@ npm run dev -- --record --devtools
 | --- | --- |
 | Seconds from Begin to first `kOk` | |
 | Seconds from Begin to first `breathing.rate` | |
-| Seated band shown on the debrief (period range, amplitude range) | |
+| Seated band on the debrief ("Gate band" period range, "Depth band" amplitude range) | |
 | Talking detected while reading? (yes / flickery / no) | |
 
 ## 2. Ten consecutive Gates — unlock vs timeout (20 min)
@@ -77,7 +77,9 @@ On the consent screen choose **10 questions**. Answer each briefly (15–30 s,
 natural pauses), then sit still and breathe normally through the Gate. Don't
 help the Gate along: the point is to see how it behaves for you.
 
-After the 10th Gate, on the debrief click **Save session**, then:
+After the 10th Gate, on the debrief click **Save session** *and* **Save signal
+recording** (save it as `~/Desktop/real-1.recording.json` now; it exists only
+in memory and is lost when the app quits). Then:
 
 ```bash
 node scripts/session-report.mjs --last=1
@@ -103,11 +105,11 @@ applies the rule below automatically.
 ### If more than 1 in 3 Gates time out (≥ 4 of 10)
 
 Loosen **one constant at a time**, in this order, keyed to the reason the
-report lists first. Try each with a JSON override before editing
-`src/engine/config.ts`:
+report lists first. Try each on the recording you just saved (step 4) or live
+with a JSON override, before editing `src/engine/config.ts`:
 
 ```bash
-npm run dev -- --config=tuning.json
+npm run dev -- --record --config=tuning.json
 ```
 
 | Report says the Gate was held closed by | Loosen | From → to |
@@ -160,10 +162,11 @@ The debrief shows it under "Pulse vs talking baseline" ("clean N %"), and
 
 ## 4. Capture a replay JSON for the test suite (5 min)
 
-The step-1 command used `--record`, so the debrief has **Save signal
-recording**. Save it as `~/Desktop/real-1.recording.json`. It holds only the
-normalized numbers, the question IDs, and the session's timing (speech
-endings, manual actions), so a replay reproduces the same debrief.
+Use the recording saved at the end of step 2 (`~/Desktop/real-1.recording.json`;
+any session started with `--record` offers **Save signal recording** on its
+debrief). It holds only the normalized numbers, the question IDs, the
+constants used, and the session's timing (clock ticks, speech endings, manual
+actions), so a replay reproduces the same debrief.
 
 Check that it replays to the same Gate outcomes:
 
@@ -193,9 +196,14 @@ images; keep it out of a public repo if you'd rather not publish them.)
 
 ## 5. Before filming
 
-- [ ] Bake any constants you changed into `src/engine/config.ts`, run
-      `npm test` (Gate tests use their own band, so they stay valid), commit,
-      and note the change in DECISIONS.md.
+- [ ] Bake any constants you changed into `src/engine/config.ts` and run
+      `npm test`. Behavior tests pin their own copy of the constants
+      (`tests/engine/testConfig.ts`), so they stay green; replay fixtures
+      carry the constants they were recorded with. The one test that will
+      flag a change is `tests/engine/config.test.ts`, which checks the brief's
+      spec values (1.5 SD band, 5 s hold, 45 s timeout, 4 s / 10 s listening,
+      6 s cue A, 2:30 cue B). If you deliberately deviate, update that test
+      and record why in DECISIONS.md. Commit.
 - [ ] Do one full dry run of DEMO_SCRIPT.md.
 - [ ] Replace the simulator screenshots in `docs/screenshots/` with real ones.
 - [ ] Update STATUS.md with the tables above.

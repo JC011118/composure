@@ -343,6 +343,62 @@ describe('InterviewEngine state machine', () => {
     expect(r.cues).toEqual([]);
   });
 
+  it('end-of-answer survives late, batched packets (no clock jump on brief stalls)', () => {
+    for (const { latency, batchMs } of [
+      { latency: 800, batchMs: 1_000 },
+      { latency: 1_400, batchMs: 1_000 },
+      { latency: 1_600, batchMs: 100 },
+    ]) {
+      const run = new ScriptedRun(
+        {
+          talking: (_t: number, c: Ctx) =>
+            c.phase === 'baselineTalking' ||
+            (c.phase === 'listening' &&
+              ((c.since >= 1_000 && c.since < 12_000) || (c.since >= 15_000 && c.since < 25_000))),
+        },
+        { questions: 1 },
+      );
+      run.engine.begin(0);
+      run.runUntil(() => run.phase === 'listening', 200_000);
+      const listenStart = run.phaseStart;
+      const step = 1000 / 30;
+      let sampleT = run.t;
+      let delivered = run.t;
+      for (let clock = run.t; clock < listenStart + 40_000; clock += 100) {
+        run.engine.tick(clock);
+        const due = clock - latency;
+        if (due - delivered >= batchMs) {
+          while (sampleT <= due) {
+            run.engine.ingest(run.sampleAt(Math.round(sampleT * 1000) / 1000));
+            sampleT += step;
+          }
+          delivered = due;
+        }
+      }
+      const ended = run.last('answerEnded') as { tMs: number } | undefined;
+      expect(ended, `latency ${latency}, batch ${batchMs}`).toBeDefined();
+      // The 3 s pause (12-15 s) must not end the answer; it ends ~4 s after 25 s.
+      expect(
+        (ended as { tMs: number }).tMs - listenStart,
+        `latency ${latency}, batch ${batchMs}`,
+      ).toBeGreaterThan(28_500);
+    }
+  });
+
+  it('ending the session during a Gate keeps the answer just given', () => {
+    const run = new ScriptedRun({ talking: normalTalk }, { questions: 2 });
+    run.engine.begin(0);
+    run.runUntil(() => run.phase === 'gate', 300_000);
+    run.runTo(run.t + 1_000);
+    run.engine.endSession(run.t);
+    const snap = run.engine.snapshotNow();
+    expect(snap.phase).toBe('debrief');
+    expect(snap.results).toHaveLength(1);
+    expect(snap.results[0].recovery).toBe('skipped');
+    expect(snap.results[0].talkTimeMs).toBeGreaterThan(15_000);
+    expect(snap.notes.some((n) => n.includes('after 1 of 2'))).toBe(true);
+  });
+
   it('renders unusable signal spans as gaps (null), never numbers', () => {
     const run = new ScriptedRun(
       { talking: normalTalk, ok: (_t, c) => !listening(c, 15_000, 17_000) },
@@ -396,6 +452,18 @@ describe('InterviewEngine state machine', () => {
     const snap = run.engine.snapshotNow();
     expect(snap.results).toHaveLength(1);
     expect(snap.notes.some((n) => n.includes('ended early'))).toBe(true);
+  });
+
+  it('holding the Recovered card waits for Continue', () => {
+    const run = new ScriptedRun({ talking: normalTalk }, { questions: 2 });
+    run.engine.begin(0);
+    run.runUntil(() => run.engine.snapshotNow().results.length === 1, 300_000);
+    run.engine.holdAfterGate(run.t);
+    run.runTo(run.t + 30_000);
+    expect(run.engine.currentPhase).toBe('gate');
+    expect(run.engine.snapshotNow().gate?.dwellRemainingMs).toBe(Number.POSITIVE_INFINITY);
+    run.engine.continueAfterGate(run.t);
+    expect(run.engine.currentPhase).toBe('asking');
   });
 
   it('camera-free mode: no baselines, paced pause, no physiology', () => {

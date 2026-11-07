@@ -11,6 +11,7 @@ import { parseRecording } from '../src/signals/recording';
 import { runHeadless } from '../src/signals/headless';
 import { replaySession } from '../src/signals/replaySession';
 import { summarize } from '../src/signals/summary';
+import { TEST_CONFIG } from './engine/testConfig';
 
 const META = { id: 'e2e', createdAt: '2026-11-07T00:00:00.000Z', appVersion: 'test' };
 
@@ -18,7 +19,7 @@ describe('end-to-end simulated session', () => {
   it('runs consent → debrief through the engine and produces a debrief JSON', () => {
     const questions = selectQuestions(QUESTION_BANK, 5, 11);
     const source = new SimulatedSignalSource({ seed: 11, scenario: 'full' });
-    const engine = new InterviewEngine({ questions, mode: 'simulated' });
+    const engine = new InterviewEngine({ questions, mode: 'simulated', config: TEST_CONFIG });
     const run = runHeadless({ engine, source, autoContinue: true });
     expect(run.reachedDebrief).toBe(true);
 

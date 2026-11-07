@@ -50,6 +50,12 @@ export interface ListeningConfig {
   talkOnDebounceMs: number;
   /** Raw talking=false must persist this long before we treat speech as stopped. */
   talkOffDebounceMs: number;
+  /**
+   * Listening decisions run on sample time; if no sample has arrived for longer
+   * than this (judged on the app clock), time advances past the stall only.
+   * Must exceed the SDK's packet latency plus its packet interval.
+   */
+  stallMs: number;
 }
 
 export interface CueAConfig {
@@ -178,6 +184,7 @@ export const DEFAULT_CONFIG: EngineConfig = {
     pauseMinMs: 1_500,
     talkOnDebounceMs: 150,
     talkOffDebounceMs: 350,
+    stallMs: 2_500,
   },
   cueA: {
     silenceMs: 6_000,

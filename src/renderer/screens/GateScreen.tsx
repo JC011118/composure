@@ -97,6 +97,8 @@ export function GateScreen({ engine, snap }: { engine: InterviewEngine; snap: En
 
   const saveCard = async () => {
     if (!qResult) return;
+    // Don't auto-advance under the save dialog; the user continues with Next.
+    controller.holdAfterGate();
     const date = new Date().toLocaleDateString(undefined, {
       year: 'numeric',
       month: 'short',
@@ -158,7 +160,9 @@ export function GateScreen({ engine, snap }: { engine: InterviewEngine; snap: En
                 </button>
                 <button type="button" className="btn primary" onClick={() => controller.continueAfterGate()}>
                   {isLast ? 'See debrief' : 'Next question'}
-                  {gate?.dwellRemainingMs !== null && gate?.dwellRemainingMs !== undefined
+                  {gate?.dwellRemainingMs !== null &&
+                  gate?.dwellRemainingMs !== undefined &&
+                  Number.isFinite(gate.dwellRemainingMs)
                     ? ` · ${Math.ceil(gate.dwellRemainingMs / 1000)} s`
                     : ''}
                 </button>

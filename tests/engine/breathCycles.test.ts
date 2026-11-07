@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BreathCycleDetector, type CycleEstimate } from '../../src/engine/breathCycles';
-import { DEFAULT_CONFIG } from '../../src/engine/config';
+import { TEST_CONFIG as DEFAULT_CONFIG } from './testConfig';
 import { mean } from '../../src/engine/stats';
 import { synthSamples, traceGen } from './helpers';
 

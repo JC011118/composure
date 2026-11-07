@@ -14,9 +14,11 @@ export const RECORDING_VERSION = 1;
 /** A user/app action that changes the engine's course, recorded so a replay can reproduce it. */
 export type SessionAction =
   | 'begin'
+  | 'tick'
   | 'speechEnded'
   | 'manualEndAnswer'
   | 'continueAfterGate'
+  | 'holdAfterGate'
   | 'skipGate'
   | 'endSession';
 

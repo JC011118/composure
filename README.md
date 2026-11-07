@@ -18,8 +18,10 @@ camera signals from the [SmartSpectra SDK](https://smartspectra.presagetech.com/
 4. **Give an honest debrief.** Per question: time to first word, talk time,
    pauses, recovery time, pulse change against your talking baseline (only with
    ≥ 60 % clean signal), and breathing change in silences against your seated
-   baseline. Every number is relative to your own baseline, and spans without
-   a clean signal are gaps, never numbers.
+   baseline. Every delta is shown next to the baseline it is relative to, and
+   spans without a clean signal are gaps, never numbers. (The HUD shows the
+   SDK's raw live readings so you can see the signal; session HRV is shown
+   once as the SDK reports it.)
 
 Everything runs on your Mac. No video, images, or audio are ever stored. It is
 a rehearsal tool, not a medical device. See [CONSENT_AND_DATA.md](CONSENT_AND_DATA.md).
@@ -118,8 +120,19 @@ Replay it:
 npm run dev -- --replay=/path/to/composure-recording-123.json
 ```
 
-To turn a recording into a regression test, copy it into `fixtures/replays/`
-and follow the pattern in `tests/replay.test.ts` (see MORNING_CHECKLIST.md).
+Re-run a recording through the engine (optionally with different constants),
+or turn it into a regression test that `npm test` replays:
+
+```bash
+npx vite-node scripts/replay-check.ts rec.json --config=tuning.json
+```
+
+```bash
+npx vite-node scripts/replay-check.ts rec.json --write-fixture=real-1
+```
+
+The second writes `fixtures/replays/real-1.recording.json` and its expected
+debrief; `tests/replay.test.ts` replays every fixture that has both files.
 
 ## Tests and checks
 

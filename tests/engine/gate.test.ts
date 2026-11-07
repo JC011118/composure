@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_CONFIG } from '../../src/engine/config';
+import { TEST_CONFIG as DEFAULT_CONFIG } from './testConfig';
 import { computeBand, GateDetector, type BreathStats } from '../../src/engine/gate';
 import { synthSamples, traceGen } from './helpers';
 

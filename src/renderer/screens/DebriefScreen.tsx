@@ -183,6 +183,12 @@ export function DebriefView({ record, live }: { record: SessionRecord; live: boo
               Gate band {(band.periodLoMs / 1000).toFixed(1)}–{(band.periodHiMs / 1000).toFixed(1)} s
               {band.personal ? '' : ' (wide default)'}
               <br />
+              Depth band{' '}
+              {Number.isFinite(band.ampHi)
+                ? `${band.ampLo.toFixed(3)}–${band.ampHi.toFixed(3)}`
+                : 'not set'}{' '}
+              <span className="muted small">(trace units)</span>
+              <br />
               Breathing rate {seated.breathingRate ? `${seated.breathingRate.mean.toFixed(1)} /min` : '—'}
             </p>
           ) : (

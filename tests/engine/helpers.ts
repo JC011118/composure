@@ -1,5 +1,6 @@
 import { InterviewEngine } from '../../src/engine/engine';
-import { DEFAULT_CONFIG, mergeConfig, type DeepPartial, type EngineConfig } from '../../src/engine/config';
+import { mergeConfig, type DeepPartial, type EngineConfig } from '../../src/engine/config';
+import { TEST_CONFIG } from './testConfig';
 import { gaussian, mulberry32 } from '../../src/engine/stats';
 import type { EngineEvent, Question, SignalMode, SignalSample } from '../../src/engine/types';
 
@@ -95,7 +96,7 @@ export class ScriptedRun {
     this.engine = new InterviewEngine({
       questions: Q(opts.questions ?? 2),
       mode: opts.mode ?? 'simulated',
-      config: mergeConfig(DEFAULT_CONFIG, opts.config ?? {}),
+      config: mergeConfig(TEST_CONFIG, opts.config ?? {}),
     });
     this.engine.on((e) => {
       this.events.push(e);

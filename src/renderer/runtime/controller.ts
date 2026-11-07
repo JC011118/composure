@@ -229,7 +229,10 @@ export class SessionController {
     this.tap?.mark('begin', beginAt);
     engine.begin(beginAt);
     this.tickTimer = setInterval(() => {
-      if (this.source) engine.tick(this.source.now());
+      if (!this.source) return;
+      const t = this.source.now();
+      this.tap?.mark('tick', t);
+      engine.tick(t);
     }, 100);
     this.patch({
       starting: false,
@@ -388,7 +391,9 @@ export class SessionController {
   }
 
   /** Apply a user action to the engine, recording it for exact replay when --record is on. */
-  private act(action: 'manualEndAnswer' | 'continueAfterGate' | 'skipGate' | 'endSession'): void {
+  private act(
+    action: 'manualEndAnswer' | 'continueAfterGate' | 'holdAfterGate' | 'skipGate' | 'endSession',
+  ): void {
     const engine = this.engine;
     const source = this.source;
     if (!engine || !source) return;
@@ -397,6 +402,7 @@ export class SessionController {
     if (action === 'manualEndAnswer' && engine.currentPhase === 'asking') this.voice.cancel();
     if (action === 'manualEndAnswer') engine.manualEndAnswer(t);
     else if (action === 'continueAfterGate') engine.continueAfterGate(t);
+    else if (action === 'holdAfterGate') engine.holdAfterGate(t);
     else if (action === 'skipGate') engine.skipGate(t);
     else engine.endSession(t);
   }
@@ -411,6 +417,11 @@ export class SessionController {
 
   skipGate(): void {
     this.act('skipGate');
+  }
+
+  /** Keep the Recovered card up (the user is saving it); Next continues. */
+  holdAfterGate(): void {
+    this.act('holdAfterGate');
   }
 
   endSessionEarly(): void {

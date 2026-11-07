@@ -53,11 +53,13 @@ numbers. Composure requests only these metrics:
 
 | SDK output | Used for |
 | --- | --- |
-| `breathing.upperTrace`, `breathing.lowerTrace` (chest / abdomen movement) | live trace, breath period and depth, the Gate |
+| `breathing.upperTrace` (chest movement) | live trace, breath period and depth, the Gate |
+| `breathing.lowerTrace` (abdomen movement) | requested as part of the SDK's default breathing set; not used by Composure |
 | `breathing.rate` (+ confidence) | baselines, cue A fallback, breathing change in silences |
 | `cardio.pulseRate` (+ confidence) | baselines, pulse change per answer |
 | `cardio.hrv` (RMSSD, `stable` flag) | one session-level HRV figure |
-| `face.talking`, `face.blinking` | hands-free answer timing |
+| `face.talking` | hands-free answer timing |
+| `face.blinking` | carried in the sample stream (and in `--record` recordings); not used for any decision or display |
 | `validationStatus` (code + hint) | signal-quality chip; non-OK spans become gaps |
 
 Composure does **not** request facial landmarks or facial-expression output,
@@ -136,9 +138,10 @@ language model run by Presage. It is **off by default**, and available only in
 real mode.
 
 - **If you opt in** (consent screen toggle), at the debrief Composure makes one
-  request: it sends a prompt containing your per-question, baseline-relative
-  numbers (for example "Q2: pulse +5 bpm vs talking baseline, breathing back
-  in seated band after 12 s"). The SDK adds its buffered metric values (pulse
+  request: it sends a prompt containing your per-question timings and
+  baseline-relative deltas (for example "Q2: time to first word 2.1 s, pulse
+  +5 bpm vs talking baseline, breathing back in seated band after 12 s") and
+  your seated breathing-rate and talking-pulse baseline means. The SDK adds its buffered metric values (pulse
   rate, HRV, breathing rate, as a numeric series) and request metadata, and
   sends them to Presage's analytics gateway, which forwards them to the
   language model. Per Presage's documentation, raw video and facial imagery
@@ -164,6 +167,9 @@ real mode.
 - No label of any kind about how you feel appears in the UI, logs, or docs.
   A test (`tests/bannedWords.test.ts`) scans every source and documentation
   file against an encoded list of banned terms on every run.
-- Only numbers relative to your own baseline are shown, with the baseline
-  visible next to each delta. When the signal is not good enough, the debrief
-  says "not enough clean signal" instead of showing a number.
+- Debrief numbers are deltas relative to your own baseline, with the baseline
+  shown next to each one; the only absolute figures are the baselines
+  themselves and one session HRV value as the SDK reports it. The HUD shows
+  the SDK's raw live readings, labelled with their field names, so you can see
+  the signal. When the signal is not good enough, the debrief says "not enough
+  clean signal" instead of showing a number.

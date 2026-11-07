@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { AnswerTracker, TalkDebouncer } from '../../src/engine/talk';
-import { DEFAULT_CONFIG } from '../../src/engine/config';
+import { TEST_CONFIG as DEFAULT_CONFIG } from './testConfig';
 
 const L = DEFAULT_CONFIG.listening;
 
