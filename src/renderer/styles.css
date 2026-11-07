@@ -618,26 +618,27 @@ a {
 
 .hud {
   position: fixed;
-  right: 16px;
-  bottom: 16px;
+  left: 0;
+  right: 0;
+  bottom: 0;
   z-index: 50;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 22px;
   font-family: var(--mono);
-  font-size: 11.5px;
-  line-height: 1.55;
-  background: rgba(10, 14, 19, 0.88);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 10px 12px;
-  min-width: 300px;
+  font-size: 12px;
+  line-height: 1.4;
+  background: rgba(8, 11, 15, 0.94);
+  border-top: 1px solid var(--line);
+  padding: 9px 20px;
   color: var(--text-2);
   backdrop-filter: blur(6px);
   pointer-events: none;
 }
 
-.hud .hud-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 18px;
+.hud .hud-item {
+  white-space: nowrap;
 }
 
 .hud .k {
@@ -646,15 +647,6 @@ a {
 
 .hud .v {
   color: var(--text);
-}
-
-.hud .mode {
-  display: flex;
-  gap: 12px;
-  justify-content: space-between;
-  margin-bottom: 6px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid var(--line);
 }
 
 .hud .badge {
@@ -693,6 +685,19 @@ a {
 
 .hud .hint {
   color: var(--warm);
-  max-width: 300px;
-  white-space: normal;
+}
+
+.hud .cam {
+  margin-left: auto;
+  color: var(--text-2);
+}
+
+.hud .rec-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f87171;
+  margin-right: 4px;
+  vertical-align: 0;
 }

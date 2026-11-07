@@ -1,7 +1,8 @@
 /**
- * Persistent HUD: raw SmartSpectra field names with their current values, a
- * signal-quality chip driven by validationStatus, and an always-visible mode
- * badge so a simulated value is never mistaken for a measurement.
+ * Persistent HUD: a slim monospace strip along the bottom of every screen with
+ * the raw SmartSpectra field names and their current values, a signal-quality
+ * chip driven by validationStatus, and an always-visible mode badge so a
+ * simulated value is never mistaken for a measurement.
  */
 
 import { redactBannedTerms } from '../../engine/lexicon';
@@ -22,54 +23,46 @@ export function Hud() {
   const controller = useController();
   const hud = useStore(controller.hud);
   const app = useStore(controller.app);
-  const mode = hud.mode === 'idle' && app.boot ? 'idle' : hud.mode;
-  const badge = MODE_BADGE[mode] ?? MODE_BADGE.idle;
+  const badge = MODE_BADGE[hud.mode] ?? MODE_BADGE.idle;
   const status = hud.status;
   const ok = status ? status.code === 0 : hud.sdkConfidenceOk;
   const label = status ? validationLabel(status.code) : null;
+  const hint = status && status.code !== 0 && status.hint ? redactBannedTerms(status.hint) : null;
 
   return (
-    <aside className="hud" aria-label="SmartSpectra signal HUD" data-testid="hud">
-      <div className="mode">
-        <span className={`badge ${badge.cls}`}>{badge.text}</span>
-        <span className="k">{badge.note}</span>
-      </div>
-      <div className="hud-row">
-        <span className="k">face.talking.detected</span>
+    <footer className="hud" aria-label="SmartSpectra signal HUD" data-testid="hud">
+      <span className="hud-item">
+        <span className={`badge ${badge.cls}`}>{badge.text}</span> <span className="k">{badge.note}</span>
+      </span>
+      <span className="hud-item">
+        <span className="k">face.talking.detected</span>{' '}
         <span className="v">{hud.talking === null ? '—' : String(hud.talking)}</span>
-      </div>
-      <div className="hud-row">
-        <span className="k">breathing.rate</span>
-        <span className="v">
-          {fmt(hud.breathingRate, 1)} /min
-          {hud.breathingRateConfidence !== null ? ` · conf ${hud.breathingRateConfidence.toFixed(0)}` : ''}
-        </span>
-      </div>
-      <div className="hud-row">
-        <span className="k">cardio.pulseRate</span>
-        <span className="v">
-          {fmt(hud.pulseBpm, 0)} bpm
-          {hud.pulseConfidence !== null ? ` · conf ${hud.pulseConfidence.toFixed(0)}` : ''}
-        </span>
-      </div>
-      <div className="hud-row">
-        <span className="k">validationStatus</span>
+      </span>
+      <span className="hud-item">
+        <span className="k">breathing.rate</span> <span className="v">{fmt(hud.breathingRate, 1)}/min</span>
+        {hud.breathingRateConfidence !== null ? (
+          <span className="k"> conf {hud.breathingRateConfidence.toFixed(0)}</span>
+        ) : null}
+      </span>
+      <span className="hud-item">
+        <span className="k">cardio.pulseRate</span> <span className="v">{fmt(hud.pulseBpm, 0)} bpm</span>
+        {hud.pulseConfidence !== null ? (
+          <span className="k"> conf {hud.pulseConfidence.toFixed(0)}</span>
+        ) : null}
+      </span>
+      <span className="hud-item">
+        <span className="k">validationStatus</span>{' '}
         <span className="quality">
           <span className={`q-dot ${ok === null ? '' : ok ? 'ok' : 'bad'}`} />
-          <span className="v">{label ? `${label.name}` : '—'}</span>
+          <span className="v">{label ? label.name : '—'}</span>
         </span>
-      </div>
-      {status && status.code !== 0 && status.hint ? (
-        <div className="hud-row">
-          <span className="hint">{redactBannedTerms(status.hint)}</span>
-        </div>
-      ) : null}
+        {hint ? <span className="hint"> {hint}</span> : null}
+      </span>
       {app.cameraActive ? (
-        <div className="hud-row">
-          <span className="k">camera</span>
-          <span className="v">on · frames stay in memory</span>
-        </div>
+        <span className="hud-item cam">
+          <span className="rec-dot" /> camera on · frames stay in memory
+        </span>
       ) : null}
-    </aside>
+    </footer>
   );
 }

@@ -30,10 +30,13 @@ a rehearsal tool, not a medical device. See [CONSENT_AND_DATA.md](CONSENT_AND_DA
 > **simulator mode** (synthetic signals, labelled SIMULATED in the HUD). Replace
 > them with real-camera captures for the submission.
 
-| Gate | Debrief |
+| Gate (settling) | Gate (unlocked) |
 | --- | --- |
-| ![Gate](docs/screenshots/gate.png) | ![Debrief](docs/screenshots/debrief.png) |
-| ![Consent](docs/screenshots/consent.png) | ![Interview](docs/screenshots/interview.png) |
+| ![Gate](docs/screenshots/gate.png) | ![Recovered card](docs/screenshots/gate-recovered.png) |
+| **Interview** | **Debrief** |
+| ![Interview](docs/screenshots/interview.png) | ![Debrief](docs/screenshots/debrief.png) |
+| **Consent** | **Seated baseline** |
+| ![Consent](docs/screenshots/consent.png) | ![Baseline](docs/screenshots/baseline.png) |
 
 ## Setup
 

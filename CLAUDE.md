@@ -16,8 +16,11 @@ live camera signals on-device. Read this file before changing anything.
 | Tests | `npm test` (vitest) |
 | Lint + typecheck | `npm run lint` |
 | Format | `npm run format` |
-| Simulator smoke (Electron + CDP) | `node scripts/smoke-sim.mjs [--full --speed=8]` |
-| Real SDK headless check | `node scripts/headless-check.mjs` (needs `PRESAGE_API_KEY`) |
+| Simulator smoke (Electron + CDP) | `node scripts/smoke-sim.mjs [--full --speed=8]` (`--camera-free`, `--real` with Chromium's fake camera) |
+| Real SDK headless check | `node scripts/headless-check.mjs [--video=clip.mp4]` (needs `PRESAGE_API_KEY`) |
+| Replay a recording / re-tune | `npx vite-node scripts/replay-check.ts rec.json [--config=x.json] [--write-fixture=name]` |
+| Summarize saved sessions | `node scripts/session-report.mjs [--last=N] [paths]` |
+| Regenerate the simulator fixture | `npm run fixtures:generate` (after an intentional engine change) |
 
 Every commit must be green: `npm test`, `npm run lint`, and the app must boot
 with `npm run dev -- --sim`.
@@ -33,8 +36,17 @@ Decided once, in `src/main/cli.ts`:
 
 The renderer asks the main process for `BootInfo` and builds the matching
 `SignalSource` in `src/renderer/runtime/`. Simulator mode never loads the
-native runtime. The HUD always labels the mode (SDK LIVE / SIMULATED / REPLAY /
-CAMERA OFF) so a simulated value is never presented as a measurement.
+native runtime. The HUD (a monospace strip along the bottom of every screen)
+always labels the mode (SDK LIVE / SIMULATED / REPLAY / CAMERA OFF) so a
+simulated value is never presented as a measurement.
+
+## Time
+
+Sample `tMs` and `source.now()` share one clock per source. Real SDK packets
+arrive late (they describe the past), so listening decisions run on sample
+time while samples flow, and the Gate only hears about clock time after
+`gate.stallMs` without samples (DECISIONS.md D-029, D-033). Keep it that way:
+never compare a wall-clock tick with sample time inside a detector.
 
 ## Hard rules
 

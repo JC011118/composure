@@ -138,23 +138,38 @@ export function TraceCanvas({
         ctx.fillText('waiting for signal…', 16, h / 2);
       }
 
-      // Band overlay.
+      // Band overlay: where this breath's peaks and troughs should land.
       if (ov && ov.center !== null && Number.isFinite(ov.ampHi)) {
         const c = ov.center;
-        const fill = ov.inBand ? 'rgba(94,234,212,0.16)' : 'rgba(148,163,184,0.13)';
-        const edge = ov.inBand ? 'rgba(94,234,212,0.55)' : 'rgba(148,163,184,0.45)';
-        ctx.fillStyle = fill;
-        const strip = (a: number, b: number) => ctx.fillRect(0, y(b), w, Math.max(1, y(a) - y(b)));
-        strip(c + ov.ampLo / 2, c + ov.ampHi / 2);
-        strip(c - ov.ampHi / 2, c - ov.ampLo / 2);
-        ctx.strokeStyle = edge;
+        const accent = ov.inBand;
+        // Soft corridor across the whole band envelope.
+        ctx.fillStyle = accent ? 'rgba(94,234,212,0.06)' : 'rgba(148,163,184,0.05)';
+        ctx.fillRect(0, y(c + ov.ampHi / 2), w, Math.max(1, y(c - ov.ampHi / 2) - y(c + ov.ampHi / 2)));
+        // Target zones for peaks (top) and troughs (bottom).
+        ctx.fillStyle = accent ? 'rgba(94,234,212,0.22)' : 'rgba(148,163,184,0.18)';
+        const zone = (a: number, b: number) => ctx.fillRect(0, y(b), w, Math.max(2, y(a) - y(b)));
+        zone(c + ov.ampLo / 2, c + ov.ampHi / 2);
+        zone(c - ov.ampHi / 2, c - ov.ampLo / 2);
+        ctx.strokeStyle = accent ? 'rgba(94,234,212,0.6)' : 'rgba(148,163,184,0.5)';
         ctx.lineWidth = 1;
+        for (const v of [c + ov.ampHi / 2, c + ov.ampLo / 2, c - ov.ampLo / 2, c - ov.ampHi / 2]) {
+          ctx.beginPath();
+          ctx.moveTo(0, y(v));
+          ctx.lineTo(w, y(v));
+          ctx.stroke();
+        }
         ctx.setLineDash([6, 6]);
+        ctx.strokeStyle = 'rgba(233,240,246,0.25)';
         ctx.beginPath();
         ctx.moveTo(0, y(c));
         ctx.lineTo(w, y(c));
         ctx.stroke();
         ctx.setLineDash([]);
+        ctx.font = '12px ui-monospace, Menlo, monospace';
+        ctx.textAlign = 'right';
+        ctx.fillStyle = accent ? 'rgba(127,240,221,0.9)' : 'rgba(184,196,208,0.75)';
+        ctx.fillText('your seated band', w - 12, y(c + ov.ampHi / 2) - 6);
+        ctx.textAlign = 'left';
       }
 
       // The trace.
