@@ -23,7 +23,7 @@ first; then MORNING_CHECKLIST.md.
 
 | What | How | Result |
 | --- | --- | --- |
-| Unit and integration tests | `npm test` | 20 files, 300+ tests, all passing |
+| Unit and integration tests | `npm test` | 20 files, 310+ tests, all passing |
 | Lint + typecheck (incl. no-DOM engine typecheck) | `npm run lint` | clean |
 | Banned words absent from every source/doc file | `tests/bannedWords.test.ts` | passing |
 | Engine purity; SDK imported only in PresageSignalSource (+ main/preload wiring) | `tests/architecture.test.ts` | passing |
@@ -31,7 +31,7 @@ first; then MORNING_CHECKLIST.md.
 | Gate: clean trace unlocks in ~5 s; noisy 2× amplitude never unlocks before 45 s; settles under SDK latency and 1 s batching | `tests/engine/gate.test.ts`, engine tests | passing |
 | Metrics on synthetic traces with known answers | `tests/engine/*.test.ts` | passing |
 | Full simulated session through the engine → debrief JSON | `tests/replay.test.ts` | passing |
-| Recorded session replays to the identical debrief | `tests/replay.test.ts` (fixture `sim-demo-seed7`) | passing |
+| Recorded session replays to the identical debrief, including under emulated SDK latency and 1 s batching | `tests/replay.test.ts`, `tests/replayLatency.test.ts` | passing |
 | Simulator realism: breath period 3–6 s (8 seeds), pulse 55–100 bpm with confidence dips while talking | `tests/signals/simulator.test.ts` | passing |
 | Electron app in simulator mode, every screen, save/list/open/delete | `node scripts/smoke-sim.mjs --full --speed=8` (Xvfb) | OK, no console errors |
 | Camera-free session driven by the Space key | `node scripts/smoke-sim.mjs --camera-free` | OK |
@@ -88,12 +88,20 @@ repo, so `--video=` was not run.
 
 ## Independent review
 
-An automated review workflow (four lenses: engine, spec compliance, renderer
-runtime, Electron security/privacy; each finding re-checked by an adversarial
-verifier) found 14 distinct defects. All are fixed, with regression tests where
-testable (DECISIONS.md D-033 to D-035). The most important: with real SDK
-packet latency the Gate would have timed out on every question, and "Skip to
-answering" closed the answer it was meant to start.
+Two rounds of automated review ran while building (each lens's findings were
+re-checked by an adversarial verifier against the current code):
+
+- **Round 1** (engine, spec compliance, renderer runtime, Electron
+  security/privacy): 14 defects, all fixed (DECISIONS.md D-033 to D-035).
+  Most important: with real SDK packet latency the Gate would have timed out
+  on every question, and "Skip to answering" closed the answer it was meant
+  to start.
+- **Round 2** (doc accuracy, late-code bug hunt, product flow + contest
+  rules): 25 findings; all fixed (D-037, D-038). Most important: listening
+  could still close answers mid-sentence under 1 s packet batching; real
+  recordings would not have replayed exactly; and simulated or replayed
+  numbers could leave the app (PNG card, saved debrief) without a
+  "simulated" label.
 
 ## First commands in the morning
 
